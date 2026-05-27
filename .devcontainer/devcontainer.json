@@ -13,5 +13,5 @@
 			]
 		}
 	},
-	"postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && pip install -r requirements.txt"
+	"postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && pip install --break-system-packages -r requirements.txt"
 }
