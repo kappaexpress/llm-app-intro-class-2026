@@ -11,20 +11,17 @@ LLMアプリケーション基礎 2026 - 第8回まで実装した最終形
 import sqlite3
 from contextlib import contextmanager
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-# --- 環境変数の読み込み ---
-# .envファイルから OPENAI_API_KEY を読み込む
-# (APIキーをコードに直接書かないこと。.envは .gitignore で除外する)
-load_dotenv()
-
 # --- OpenAIクライアントの初期化 ---
 # 環境変数 OPENAI_API_KEY を自動で読み取ってクライアントを作る
+# 起動前にシェルで以下を実行してキーをセットしておくこと:
+#   export OPENAI_API_KEY=sk-...
+# (キーをコードに直接書かないこと。export は現在のシェルにのみ有効)
 client = OpenAI()
 
 # 使うモデル名(GPT-5.4 クラスで最も安価。Reasoning 対応)
