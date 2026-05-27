@@ -9,12 +9,19 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"anthropic.claude-code"
+				"anthropic.claude-code",
+				"ms-vscode.live-server",
+				"MS-CEINTL.vscode-language-pack-ja",
+				"GitHub.copilot-chat",
+				"MS-vsliveshare.vsliveshare",
+				"marp-team.marp-vscode"
 			]
 		}
 	},
 	"postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && pip install --break-system-packages -r requirements.txt",
-	"forwardPorts": [8000],
+	"forwardPorts": [
+		8000
+	],
 	"portsAttributes": {
 		"8000": {
 			"label": "chat-app",
