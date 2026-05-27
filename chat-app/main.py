@@ -27,8 +27,13 @@ load_dotenv()
 # 環境変数 OPENAI_API_KEY を自動で読み取ってクライアントを作る
 client = OpenAI()
 
-# 使うモデル名(コストを抑えた小さいモデル)
-MODEL_NAME = "gpt-4o-mini"
+# 使うモデル名(GPT-5.4 クラスで最も安価。Reasoning 対応)
+MODEL_NAME = "gpt-5.4-nano"
+
+# Reasoning の強さ。"none" / "low" / "medium" / "high" / "xhigh"
+# チャット用途では "none"〜"low" でコストとレイテンシを抑えるのが基本
+# "none" は推論を完全にスキップする最速モード
+REASONING_EFFORT = "low"
 
 # デフォルトのシステムプロンプト(AIの振る舞いを指示する文)
 DEFAULT_SYSTEM_PROMPT = (
@@ -272,6 +277,7 @@ def send_message(conversation_id: int, user_message: MessageCreate):
             response = client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages_for_api,
+                reasoning_effort=REASONING_EFFORT,
             )
         except Exception as e:
             # API呼び出し失敗
