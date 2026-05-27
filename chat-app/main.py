@@ -160,9 +160,7 @@ def delete_conversation(conversation_id: int):
         cursor = conn.cursor()
 
         # 存在チェック
-        cursor.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
-        )
+        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
         existing = cursor.fetchone()
         if existing is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -171,9 +169,7 @@ def delete_conversation(conversation_id: int):
         cursor.execute(
             "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
         )
-        cursor.execute(
-            "DELETE FROM conversations WHERE id = ?", (conversation_id,)
-        )
+        cursor.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
         conn.commit()
         return {"message": "Conversation deleted", "id": conversation_id}
 
@@ -188,9 +184,7 @@ def get_messages(conversation_id: int):
         cursor = conn.cursor()
 
         # 会話の存在チェック
-        cursor.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
-        )
+        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
         if cursor.fetchone() is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
@@ -231,9 +225,7 @@ def send_message(conversation_id: int, user_message: MessageCreate):
         cursor = conn.cursor()
 
         # 1. 会話の存在チェック + system_prompt を取り出す
-        cursor.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
-        )
+        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
         conversation = cursor.fetchone()
         if conversation is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -265,9 +257,7 @@ def send_message(conversation_id: int, user_message: MessageCreate):
             {"role": "system", "content": conversation["system_prompt"]},
         ]
         for row in past_rows:
-            messages_for_api.append(
-                {"role": row["role"], "content": row["content"]}
-            )
+            messages_for_api.append({"role": row["role"], "content": row["content"]})
 
         # 4. OpenAI API を呼び出す
         try:
