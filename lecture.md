@@ -17,7 +17,7 @@ LLMの基礎を学びながら、最終的に **複数会話の保存・切り�
   - システムプロンプトは内部対応（UIは最後20分で軽く紹介）
   - ストリーミング応答は **扱わない**
 - **発展テーマ**（Tool use / Function calling / RAG / エージェント）は第8回最後の20分で **概念スライドのみ**
-- **APIキー**: **講師から配布**する方式（受講生個人での取得は不要）。配布されたキーは受講生ごとに `.env` で管理し、絶対に外部共有・コミットしない。講師側は OpenAI ダッシュボードで月予算上限を設定して暴走を防ぐ運用とする
+- **APIキー**: **講師から配布**する方式（受講生個人での取得は不要）。配布されたキーは `python main.py` 起動前にシェルで `export OPENAI_API_KEY=sk-...` として環境変数にセットして使う(`.env` は使わない方針)。絶対に外部共有・コミットしない。講師側は OpenAI ダッシュボードで月予算上限を設定して暴走を防ぐ運用とする
 - **演習スタイル**: 各回 `session0X/exercise/` に、その回までで実装済みの chat-app スナップショットを置く（第3回除く）。受講生は前回の自分のコードから続けてもよいし、`exercise/` をコピーしてもよい
 
 ## ディレクトリ構成（予定）
@@ -25,14 +25,13 @@ LLMの基礎を学びながら、最終的に **複数会話の保存・切り�
 ```
 llm-app-intro-class-2026/
 ├── lecture.md                # 本ファイル
-├── requirements.txt          # fastapi, uvicorn, openai, python-dotenv
-├── .gitignore                # .env, *.db, __pycache__
+├── requirements.txt          # fastapi, uvicorn, openai
+├── .gitignore                # *.db, __pycache__
 ├── .devcontainer/            # postCreateCommand で pip install 済
 ├── knowledgebase/
 │   └── web-app-intro-class-2026/  # 前コース教材（参照用）
 ├── chat-app/                 # 最終完成形（作成済み）
 │   ├── main.py
-│   ├── .env.example
 │   └── static/
 │       ├── index.html
 │       ├── style.css
@@ -165,8 +164,11 @@ Python から OpenAI API を呼んで返答が返ってくる体験をする
 - **講師からAPIキーを配布する**(受講生個人での取得は不要)
   - 配布方法は当日アナウンス。受け取ったキーは他人に見せない・送らない
   - 講師側で月予算上限を設定してあるので「うっかり爆発」しても止まる仕組みだが、無駄な消費はしない意識を持つ
-- **APIキーの安全な管理①** — `.env` ファイル / `python-dotenv` / `.gitignore`
-  - 配布キーといえど **GitHub に上げたら即流出**。`.env` は `.gitignore` で除外されていることを各自確認
+- **APIキーの安全な管理①** — シェルの環境変数で渡す
+  - 起動前に毎回シェルで `export OPENAI_API_KEY=sk-...` を実行してから `python main.py` する流れ
+  - `export` は **現在のシェルにのみ** 有効。ターミナルを開き直したらやり直し(これが安全側に倒した仕様)
+  - `.env` ファイル方式は本コースでは使わない(キーがファイルとして残り続けるとコミット事故が起きやすいため、毎回手で `export` する運用に統一)
+  - **コード中に直書きしない** / **コミットしない**
 - `pip install openai`
 
 ### 後半
