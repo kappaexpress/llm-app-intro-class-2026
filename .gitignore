@@ -1,1 +1,13 @@
 knowledgebase/*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 環境変数(APIキーなどの秘密情報)
+.env
+
+# SQLiteデータベース
+*.db
