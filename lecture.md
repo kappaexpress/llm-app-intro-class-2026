@@ -5,7 +5,11 @@ LLMの基礎を学びながら、最終的に **複数会話の保存・切り�
 
 ## コース全体方針
 
-- **使用API**: OpenAI API（ChatGPT、`openai` Python SDK）
+- **使用API**: OpenAI API（`openai` Python SDK）
+- **使用モデル**: `gpt-5.4-nano`（[公式ドキュメント](https://developers.openai.com/api/docs/models/gpt-5.4-nano)）
+  - GPT-5.4 クラスで最も安価。分類・抽出・チャットなど高ボリュームな用途向け
+  - 入力 $0.20 / 出力 $1.25（1Mトークン）、コンテキスト 400K、最大出力 128K
+  - **Reasoning（推論）対応モデル** — 必要に応じて「考えてから答える」モードを使える
 - **技術スタック**: 前コースを踏襲（FastAPI + Vanilla HTML/CSS/JS + SQLite）
 - **最終成果物**: `chat-app/`
   - 会話一覧サイドバー、複数会話の新規作成・切替・削除
@@ -96,6 +100,7 @@ LLMが何をする道具なのかを掴み、このコースで作るものを�
 ### 後半
 - 主要モデルの俯瞰（ChatGPT / Claude / Gemini）と特徴
 - LLMの得意/不得意
+- **「考えてから答える」モデル（Reasoning モデル）の登場** — 即答型との違いをChatGPT上で体感（例: o系 / GPT-5.x の thinking モード）
 - ChatGPT のWeb版を実際に触る
 - 第2回以降の流れ説明
 
@@ -152,6 +157,7 @@ Python から OpenAI API を呼んで返答が返ってくる体験をする
 
 ### 前半
 - OpenAI APIの概要 / 料金体系の概要
+- 使うモデルは `gpt-5.4-nano`（安価で十分高品質、コンテキスト400K）
 - APIキーの取得方法
 - **APIキーの安全な管理①** — `.env` ファイル / `python-dotenv` / `.gitignore`
 - `pip install openai`
@@ -159,7 +165,8 @@ Python から OpenAI API を呼んで返答が返ってくる体験をする
 ### 後半
 - 最小スクリプトで1往復（`chat.completions.create`）
 - `model` / `messages` / `max_tokens` / `temperature` の意味
-- トークン消費とコストの見方
+- **Reasoning パラメータの紹介** — `gpt-5.4-nano` は推論対応モデル。`reasoning_effort`（`none` / `low` / `medium` / `high` / `xhigh`）で「どれくらい考えてから答えるか」を切り替えられる。本コースのチャット用途では基本 `none`〜`low` で十分（コスト・レイテンシの観点）。難しい質問だけ `high`/`xhigh` に上げる、という使い分けを実演
+- トークン消費とコストの見方（推論トークンも課金対象であることに注意）
 - 「やってはいけないこと」: GitHubにキーを上げる、フロントに直接書く
 
 ### 演習
@@ -255,10 +262,11 @@ ChatGPT風の「複数会話を切り替えて使える」アプリを完成さ�
 
 ### 最後20分（軽め）
 - システムプロンプトでペルソナを変える（`conversations` に `system_prompt` カラム、デフォルト値で運用）
+- **Reasoning の使い分け再訪** — 会話ごとに `reasoning_effort` を変える発想（雑談用は `none`/`low`、コード相談は `high`/`xhigh` など）。コードに1行追加するだけで挙動が変わるデモ
 - 発展テーマの **概念スライドのみ** 紹介:
   - Tool use / Function calling — AIにツールを使わせる
   - RAG（Retrieval Augmented Generation）— 自分のドキュメントを参照させる
-  - エージェント — 自律的にタスクを進めるLLM
+  - エージェント — 自律的にタスクを進めるLLM（Reasoning モデルが土台になっている話に軽く触れる）
 - このコース修了後に何ができるようになったか、次に何を学ぶといいか
 
 ### exercise/ の状態
