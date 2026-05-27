@@ -1,31 +1,7 @@
 ---
 marp: true
 theme: default
-class: invert
 paginate: true
-style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  table {
-    font-size: 22px;
-  }
-  code {
-    font-size: 0.9em;
-  }
 ---
 
 # 第3回: 復習回（Web基礎）

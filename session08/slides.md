@@ -713,6 +713,8 @@ REASONING_EFFORT = "low"   # ← main.py の1行を変えるだけ
 
 # 会話ごとに reasoning_effort を変える
 
+> これは現状の実装ではなく、次の一歩としての **応用案** です(現在の chat-app の DB スキーマには `reasoning_effort` カラムは存在しません)
+
 ```python
 # 案: conversations テーブルに reasoning_effort カラムを足す
 CREATE TABLE conversations (

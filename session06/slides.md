@@ -348,6 +348,51 @@ async function sendMessage() {
 
 ---
 
+## `/api/chat` のリクエストスキーマが変わる
+
+第5回までの `POST /api/chat` は **単発の質問** を受け取っていた:
+
+```json
+{ "message": "こんにちは" }
+```
+
+第6回からは **会話履歴をまるごと** 受け取る形に変える:
+
+```json
+{
+  "messages": [
+    { "role": "user",      "content": "私の名前は田中です" },
+    { "role": "assistant", "content": "よろしくお願いします" },
+    { "role": "user",      "content": "名前は?" }
+  ]
+}
+```
+
+なぜ変える?: 履歴を毎回送らないとAIは前の発言を覚えてくれないから。
+
+---
+
+## Pydantic モデルも書き換える
+
+第5回の `ChatRequest(message: str)` は **捨てて** 、新しい形に置き換える:
+
+```python
+class Message(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=4000)
+
+class ChatRequest(BaseModel):
+    messages: list[Message] = Field(min_length=1)
+```
+
+- `Message` = 1発言ぶん (`role` + `content`)
+- `ChatRequest` = その配列を1つ持つだけ
+- `role` は `"user"` か `"assistant"` のどちらかに限定
+
+これでフロントから来る JSON をそのまま型チェックできる。
+
+---
+
 ## サーバ側はびっくりするほどシンプル
 
 ```python

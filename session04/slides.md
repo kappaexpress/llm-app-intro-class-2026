@@ -1,48 +1,7 @@
 ---
 marp: true
 theme: default
-class: invert
 paginate: true
-style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  code {
-    background-color: #1f2937;
-    color: #fbbf24;
-  }
-  pre {
-    background-color: #111827;
-    font-size: 20px;
-  }
-  table {
-    font-size: 22px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  .warn {
-    background-color: #7f1d1d;
-    color: #fee2e2;
-    padding: 12px;
-    border-radius: 6px;
-  }
-  .ok {
-    background-color: #065f46;
-    color: #d1fae5;
-    padding: 12px;
-    border-radius: 6px;
-  }
 ---
 
 # 第4回: OpenAI APIに初めて触れる
@@ -73,7 +32,7 @@ style: |
 **後半**
 
 - 最小スクリプトで1往復してみる
-- `model` / `messages` / `max_tokens` / `temperature` の意味
+- `model` / `messages` の意味
 - **Reasoning(考えてから答える)を体感する** — `none` vs `high`
 - トークンとコストの見方
 - 演習: CLIチャットを書く
@@ -115,7 +74,7 @@ OpenAI API は **使った分だけ** 課金される(従量制)
 | -------------- | ------------------------- |
 | 入力料金       | $0.20 / 1Mトークン        |
 | 出力料金       | $1.25 / 1Mトークン        |
-| コンテキスト窓 | 400K トークン             |
+| コンテキストウィンドウ | 400K トークン             |
 | 最大出力       | 128K トークン             |
 | Reasoning      | **対応**(`none`〜`xhigh`) |
 
@@ -190,17 +149,13 @@ OPENAI_API_KEY=sk-xxx
 
 ## やってはいけないこと
 
-<div class="warn">
-
-**絶対NG**
-
-1. コードに直書き: `client = OpenAI(api_key="sk-xxxxx")`
-2. GitHub に push する(public/private 問わず)
-3. ブラウザ側の JavaScript に書く(F12で誰でも見える)
-4. Slack や DM、メールで生のキーを共有する
-5. スクリーンショットに写ったまま投稿する
-
-</div>
+> **絶対NG**
+>
+> 1. コードに直書き: `client = OpenAI(api_key="sk-xxxxx")`
+> 2. GitHub に push する(public/private 問わず)
+> 3. ブラウザ側の JavaScript に書く(F12で誰でも見える)
+> 4. Slack や DM、メールで生のキーを共有する
+> 5. スクリーンショットに写ったまま投稿する
 
 > GitHub は流出キーを自動検出して通知してくれるが、その前に第三者が使い切る事例は多い
 
@@ -249,31 +204,11 @@ $ python one_shot.py
 
 ---
 
-## 各パラメータの意味
-
-```python
-client.chat.completions.create(
-    model="gpt-5.4-nano",   # どのモデルを使うか
-    messages=[...],          # 会話履歴(後述)
-    max_tokens=500,          # 返答の最大長(トークン数)
-    temperature=0.7,         # 0=堅実, 1=創造的
-)
-```
-
-| パラメータ    | 役割                                   |
-| ------------- | -------------------------------------- |
-| `model`       | モデル名                               |
-| `messages`    | 会話の中身。配列で渡す                 |
-| `max_tokens`  | 返答の長さの上限。コスト制御にも使える |
-| `temperature` | 出力のばらつき。0で同じ答えに近づく    |
-
----
-
 ## `messages` 配列の中身
 
 ```python
 messages = [
-    {"role": "system", "content": "あなたは親切なアシスタントです。"},
+    {"role": "system", "content": "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"},
     {"role": "user",   "content": "Pythonとは?"},
     {"role": "assistant", "content": "Pythonとは..."},
     {"role": "user",   "content": "じゃあJavaScriptは?"},
@@ -370,10 +305,6 @@ response = client.chat.completions.create(
 
 ## 使い分けの指針
 
-<div class="columns">
-
-<div>
-
 **`none` / `low` を使う**
 
 - 雑談
@@ -382,20 +313,12 @@ response = client.chat.completions.create(
 - 速度重視のチャット
 - 大量バッチ処理
 
-</div>
-
-<div>
-
 **`high` / `xhigh` を使う**
 
 - 論理パズル / 数学
 - コードレビュー・難読バグ
 - 複雑な計画立案
 - 高品質な作文の最終仕上げ
-
-</div>
-
-</div>
 
 > **デフォルトは安い側**。難しい時だけ高くする、が基本戦略
 
@@ -451,7 +374,7 @@ from openai import OpenAI
 
 client = OpenAI()
 messages = [
-    {"role": "system", "content": "あなたは親切なアシスタントです。"},
+    {"role": "system", "content": "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"},
 ]
 
 while True:

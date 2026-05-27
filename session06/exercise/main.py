@@ -27,7 +27,9 @@ client = OpenAI()
 # 使うモデル名(GPT-5.4 クラスで最も安価。Reasoning 対応)
 MODEL_NAME = "gpt-5.4-nano"
 
-# Reasoning(推論)の強さ。チャット用途では "low" で十分速くて安い
+# Reasoning の強さ。"none" / "low" / "medium" / "high" / "xhigh"
+# チャット用途では "none"〜"low" でコストとレイテンシを抑えるのが基本
+# "none" は推論を完全にスキップする最速モード
 REASONING_EFFORT = "low"
 
 # システムプロンプト(AIの振る舞いを指示する文)
