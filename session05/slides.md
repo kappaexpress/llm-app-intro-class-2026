@@ -27,7 +27,7 @@ style: |
 
 # 第5回: FastAPIでChatバックエンドを作る
 
-LLMアプリケーション基礎 2026
+LLMアプリケーション基礎
 
 - 今日のゴール: OpenAI APIを **FastAPI でラップ** して HTTP 経由で呼べるようにする
 - ブラウザから (まだ Swagger UI から) AI に話しかけられる状態を作る

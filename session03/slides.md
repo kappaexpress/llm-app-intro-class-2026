@@ -27,7 +27,7 @@ style: |
 
 # 第3回: 復習回（Web基礎）
 
-**LLMアプリケーション基礎 2026**
+**LLMアプリケーション基礎**
 
 FastAPI / fetch / SQLite を思い出す回
 
