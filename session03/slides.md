@@ -390,29 +390,25 @@ for row in cursor.fetchall():
 
 ---
 
-## contextmanager で接続管理
+## 接続は使うたびに connect → close
 
-毎回 `conn.close()` を書くのは面倒 + 閉じ忘れの危険。
-`@contextmanager` で `with` 文に対応させると安全。
+毎回の関数で `connect` して、最後に `close` する書き方が一番分かりやすい
 
 ```python
-from contextlib import contextmanager
-
-@contextmanager
-def get_db_connection():
+def get_all_messages():
     conn = sqlite3.connect("chat.db")
     conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-# 使う側
-with get_db_connection() as conn:
     cursor = conn.cursor()
+
     cursor.execute("SELECT * FROM messages")
     rows = cursor.fetchall()
+
+    conn.close()
+    return rows
 ```
+
+- 関数ごとに自分で開いて、自分で閉じる
+- `with` 文を使う書き方もあるが、まずは「明示的に閉じる」習慣をつける
 
 > 第7回(履歴の永続化)で **再びこの形に出会う**。
 > 「あ、第3回でやったやつだ」となれば OK。
@@ -438,7 +434,7 @@ with get_db_connection() as conn:
 
 ## ファイル構成
 
-```
+```text
 session03/exercise/
 ├── main.py              # FastAPI バックエンド
 ├── static/

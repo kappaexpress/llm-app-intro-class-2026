@@ -42,7 +42,7 @@ style: |
 **前半**
 - なぜ永続化が必要か（フロント保持の限界）
 - スキーマ設計 と `init_db()` でテーブル作成
-- `get_db_connection()` の使い方
+- 各関数で `connect` → `close` する書き方
 
 **後半**
 - 保存 / 読み込み / API へ流す処理を実装
@@ -180,31 +180,27 @@ init_db()
 
 ---
 
-## `get_db_connection()`: 接続管理
+## 接続は使うたびに connect → close
 
-毎回 `connect` / `close` を書くと面倒 → `contextmanager` でまとめる
+各 API ハンドラの中で毎回 `sqlite3.connect` して、最後に `close` する
 
 ```python
-from contextlib import contextmanager
-
-@contextmanager
-def get_db_connection():
+def get_something():
     conn = sqlite3.connect(DATABASE)
     # 結果を辞書のように row["role"] で取り出せるようにする
     conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
-```
-
-使う側:
-
-```python
-with get_db_connection() as conn:
     cursor = conn.cursor()
+
     cursor.execute("SELECT ...")
+    rows = cursor.fetchall()
+
+    conn.close()
+    return rows
 ```
+
+- 関数ごとに自分で開いて、自分で閉じる
+- `return` の前に `conn.close()` を書くだけ
+- 「閉じる場所」がコードを読めば一目で分かるのがメリット
 
 ---
 
@@ -226,19 +222,23 @@ with get_db_connection() as conn:
 @app.get("/api/messages")
 def get_messages():
     """全メッセージを古い順で返す"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, role, content, created_at
-            FROM messages
-            ORDER BY id
-        """)
-        rows = cursor.fetchall()
-        return [
-            {"id": r["id"], "role": r["role"],
-             "content": r["content"], "created_at": r["created_at"]}
-            for r in rows
-        ]
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, role, content, created_at
+        FROM messages
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [
+        {"id": r["id"], "role": r["role"],
+         "content": r["content"], "created_at": r["created_at"]}
+        for r in rows
+    ]
 ```
 
 ---
@@ -259,21 +259,22 @@ def get_messages():
 ```python
 @app.post("/api/messages", status_code=201)
 def send_message(user_message: MessageCreate):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        # 1. ユーザーメッセージをDBに保存
-        cursor.execute(
-            "INSERT INTO messages (role, content) VALUES (?, ?)",
-            ("user", user_message.content),
-        )
-        conn.commit()
+    # 1. ユーザーメッセージをDBに保存
+    cursor.execute(
+        "INSERT INTO messages (role, content) VALUES (?, ?)",
+        ("user", user_message.content),
+    )
+    conn.commit()
 
-        # 2. 過去メッセージ全件を古い順に取り出す
-        cursor.execute(
-            "SELECT role, content FROM messages ORDER BY id"
-        )
-        past_rows = cursor.fetchall()
+    # 2. 過去メッセージ全件を古い順に取り出す
+    cursor.execute(
+        "SELECT role, content FROM messages ORDER BY id"
+    )
+    past_rows = cursor.fetchall()
 ```
 
 ---
@@ -281,30 +282,32 @@ def send_message(user_message: MessageCreate):
 ## POST `/api/messages` 実装 (2/2)
 
 ```python
-        # 3. system + 過去全件 を OpenAI 形式に組み立て
-        messages_for_api = [
-            {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
-        ]
-        for row in past_rows:
-            messages_for_api.append(
-                {"role": row["role"], "content": row["content"]}
-            )
-
-        # 4. OpenAI 呼び出し
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages_for_api,
-            reasoning_effort=REASONING_EFFORT,
+    # 3. system + 過去全件 を OpenAI 形式に組み立て
+    messages_for_api = [
+        {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+    ]
+    for row in past_rows:
+        messages_for_api.append(
+            {"role": row["role"], "content": row["content"]}
         )
-        assistant_content = response.choices[0].message.content
 
-        # 5. AI返答をDBに保存
-        cursor.execute(
-            "INSERT INTO messages (role, content) VALUES (?, ?)",
-            ("assistant", assistant_content),
-        )
-        conn.commit()
-        return {"role": "assistant", "content": assistant_content}
+    # 4. OpenAI 呼び出し
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=messages_for_api,
+        reasoning_effort=REASONING_EFFORT,
+    )
+    assistant_content = response.choices[0].message.content
+
+    # 5. AI返答をDBに保存
+    cursor.execute(
+        "INSERT INTO messages (role, content) VALUES (?, ?)",
+        ("assistant", assistant_content),
+    )
+    conn.commit()
+
+    conn.close()
+    return {"role": "assistant", "content": assistant_content}
 ```
 
 ---
@@ -405,7 +408,7 @@ sqlite3 chat.db "SELECT id, role, substr(content,1,40), created_at FROM messages
 ### 学んだこと
 1. フロントが履歴を持つ世界から、**サーバが履歴を持つ** 世界へ移行した
 2. `messages` テーブル1つで十分実用になる
-3. `init_db()` / `get_db_connection()` のパターンは第8回でもそのまま使う
+3. `init_db()` と 各関数での connect / close パターンは第8回でもそのまま使う
 4. フロントの責務が減って、UIに集中できるようになった
 5. リロード・サーバ再起動でも会話が残るようになった
 

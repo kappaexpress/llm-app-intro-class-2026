@@ -14,7 +14,6 @@ LLMアプリケーション基礎
 """
 
 import sqlite3
-from contextlib import contextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -89,28 +88,6 @@ def init_db():
     conn.close()
 
 
-@contextmanager
-def get_db_connection():
-    """
-    データベース接続をコンテキストマネージャで管理する。
-
-    使い方:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(...)
-
-    with ブロックを抜けるときに自動で close される。
-    row_factory に sqlite3.Row を指定することで、
-    結果を row["role"] のように辞書ライクに取り出せる。
-    """
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
 # --- Pydantic モデル (リクエストボディの型) ---
 
 
@@ -130,23 +107,27 @@ def get_messages():
     保存されている全メッセージを古い順で返す。
     フロントはページロード時にこれを呼んで履歴を画面に並べる。
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, role, content, created_at
-            FROM messages
-            ORDER BY id
-        """)
-        rows = cursor.fetchall()
-        return [
-            {
-                "id": row["id"],
-                "role": row["role"],
-                "content": row["content"],
-                "created_at": row["created_at"],
-            }
-            for row in rows
-        ]
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, role, content, created_at
+        FROM messages
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [
+        {
+            "id": row["id"],
+            "role": row["role"],
+            "content": row["content"],
+            "created_at": row["created_at"],
+        }
+        for row in rows
+    ]
 
 
 @app.post("/api/messages", status_code=201)
@@ -161,60 +142,64 @@ def send_message(user_message: MessageCreate):
       4. AI の返答を DB に保存
       5. AI の返答を返す
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        # 1. ユーザーメッセージを DB に保存
-        # ? プレースホルダを使うことで SQL インジェクションを防ぐ
-        cursor.execute(
-            "INSERT INTO messages (role, content) VALUES (?, ?)",
-            ("user", user_message.content),
+    # 1. ユーザーメッセージを DB に保存
+    # ? プレースホルダを使うことで SQL インジェクションを防ぐ
+    cursor.execute(
+        "INSERT INTO messages (role, content) VALUES (?, ?)",
+        ("user", user_message.content),
+    )
+    conn.commit()
+
+    # 2. 過去メッセージを全件、古い順で取り出す
+    cursor.execute("SELECT role, content FROM messages ORDER BY id")
+    past_rows = cursor.fetchall()
+
+    # 3. OpenAI API に渡す形式に組み立てる
+    # 先頭に system を1つ + 過去のメッセージ全部
+    messages_for_api = [
+        {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+    ]
+    for row in past_rows:
+        messages_for_api.append({"role": row["role"], "content": row["content"]})
+
+    # 4. OpenAI API を呼び出す
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages_for_api,
+            reasoning_effort=REASONING_EFFORT,
         )
-        conn.commit()
-
-        # 2. 過去メッセージを全件、古い順で取り出す
-        cursor.execute("SELECT role, content FROM messages ORDER BY id")
-        past_rows = cursor.fetchall()
-
-        # 3. OpenAI API に渡す形式に組み立てる
-        # 先頭に system を1つ + 過去のメッセージ全部
-        messages_for_api = [
-            {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
-        ]
-        for row in past_rows:
-            messages_for_api.append({"role": row["role"], "content": row["content"]})
-
-        # 4. OpenAI API を呼び出す
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages_for_api,
-                reasoning_effort=REASONING_EFFORT,
-            )
-        except Exception as e:
-            # API 呼び出し失敗時は 500 を返す
-            raise HTTPException(
-                status_code=500,
-                detail=f"AI APIの呼び出しに失敗しました: {e}",
-            )
-
-        # AI の返答テキストを取り出す
-        assistant_content = response.choices[0].message.content
-
-        # 5. AI の返答を DB に保存
-        cursor.execute(
-            "INSERT INTO messages (role, content) VALUES (?, ?)",
-            ("assistant", assistant_content),
+    except Exception as e:
+        # API 呼び出し失敗時は 500 を返す
+        conn.close()
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI APIの呼び出しに失敗しました: {e}",
         )
-        conn.commit()
-        assistant_message_id = cursor.lastrowid
 
-        # 6. クライアントに返す
-        return {
-            "id": assistant_message_id,
-            "role": "assistant",
-            "content": assistant_content,
-        }
+    # AI の返答テキストを取り出す
+    assistant_content = response.choices[0].message.content
+
+    # 5. AI の返答を DB に保存
+    cursor.execute(
+        "INSERT INTO messages (role, content) VALUES (?, ?)",
+        ("assistant", assistant_content),
+    )
+    conn.commit()
+    assistant_message_id = cursor.lastrowid
+
+    conn.close()
+
+    # 6. クライアントに返す
+    return {
+        "id": assistant_message_id,
+        "role": "assistant",
+        "content": assistant_content,
+    }
 
 
 # --- 静的ファイル配信 ---

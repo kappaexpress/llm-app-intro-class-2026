@@ -9,7 +9,6 @@ LLMアプリケーション基礎 - 第8回まで実装した最終形
 """
 
 import sqlite3
-from contextlib import contextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -86,18 +85,6 @@ def init_db():
     conn.close()
 
 
-@contextmanager
-def get_db_connection():
-    """データベース接続をコンテキストマネージャで管理する"""
-    conn = sqlite3.connect(DATABASE)
-    # 結果を辞書のように扱えるようにする
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
 # --- Pydanticモデル(リクエストボディの型) ---
 
 
@@ -122,56 +109,68 @@ class MessageCreate(BaseModel):
 @app.get("/api/conversations")
 def get_conversations():
     """会話の一覧を取得する(新しい順)"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, title, created_at
-            FROM conversations
-            ORDER BY id DESC
-        """)
-        rows = cursor.fetchall()
-        return [
-            {"id": row["id"], "title": row["title"], "created_at": row["created_at"]}
-            for row in rows
-        ]
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, title, created_at
+        FROM conversations
+        ORDER BY id DESC
+    """)
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [
+        {"id": row["id"], "title": row["title"], "created_at": row["created_at"]}
+        for row in rows
+    ]
 
 
 @app.post("/api/conversations", status_code=201)
 def create_conversation(conversation: ConversationCreate):
     """新しい会話を作成する"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO conversations (title, system_prompt) VALUES (?, ?)",
-            (conversation.title, conversation.system_prompt),
-        )
-        conn.commit()
-        conversation_id = cursor.lastrowid
-        return {
-            "id": conversation_id,
-            "title": conversation.title,
-        }
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO conversations (title, system_prompt) VALUES (?, ?)",
+        (conversation.title, conversation.system_prompt),
+    )
+    conn.commit()
+    conversation_id = cursor.lastrowid
+
+    conn.close()
+    return {
+        "id": conversation_id,
+        "title": conversation.title,
+    }
 
 
 @app.delete("/api/conversations/{conversation_id}")
 def delete_conversation(conversation_id: int):
     """会話を削除する(中のメッセージも一緒に削除)"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        # 存在チェック
-        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-        existing = cursor.fetchone()
-        if existing is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+    # 存在チェック
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    existing = cursor.fetchone()
+    if existing is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # この会話に属するメッセージを先に消す
-        cursor.execute(
-            "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
-        )
-        cursor.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
-        conn.commit()
-        return {"message": "Conversation deleted", "id": conversation_id}
+    # この会話に属するメッセージを先に消す
+    cursor.execute(
+        "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
+    )
+    cursor.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
+    conn.commit()
+
+    conn.close()
+    return {"message": "Conversation deleted", "id": conversation_id}
 
 
 # --- APIエンドポイント: メッセージ ---
@@ -180,33 +179,37 @@ def delete_conversation(conversation_id: int):
 @app.get("/api/conversations/{conversation_id}/messages")
 def get_messages(conversation_id: int):
     """指定された会話のメッセージ一覧を取得する(古い順)"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        # 会話の存在チェック
-        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-        if cursor.fetchone() is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+    # 会話の存在チェック
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    if cursor.fetchone() is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
-        cursor.execute(
-            """
-            SELECT id, role, content, created_at
-            FROM messages
-            WHERE conversation_id = ?
-            ORDER BY id
-            """,
-            (conversation_id,),
-        )
-        rows = cursor.fetchall()
-        return [
-            {
-                "id": row["id"],
-                "role": row["role"],
-                "content": row["content"],
-                "created_at": row["created_at"],
-            }
-            for row in rows
-        ]
+    cursor.execute(
+        """
+        SELECT id, role, content, created_at
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY id
+        """,
+        (conversation_id,),
+    )
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [
+        {
+            "id": row["id"],
+            "role": row["role"],
+            "content": row["content"],
+            "created_at": row["created_at"],
+        }
+        for row in rows
+    ]
 
 
 @app.post("/api/conversations/{conversation_id}/messages", status_code=201)
@@ -221,75 +224,80 @@ def send_message(conversation_id: int, user_message: MessageCreate):
       4. AIの返答をDBに保存
       5. AIの返答を返す
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        # 1. 会話の存在チェック + system_prompt を取り出す
-        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-        conversation = cursor.fetchone()
-        if conversation is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+    # 1. 会話の存在チェック + system_prompt を取り出す
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    conversation = cursor.fetchone()
+    if conversation is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # 2. ユーザーメッセージをDBに保存
-        cursor.execute(
-            "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-            (conversation_id, "user", user_message.content),
+    # 2. ユーザーメッセージをDBに保存
+    cursor.execute(
+        "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+        (conversation_id, "user", user_message.content),
+    )
+    conn.commit()
+
+    # 3. この会話の過去メッセージを全部取り出す(今追加したユーザーメッセージも含む)
+    cursor.execute(
+        """
+        SELECT role, content
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY id
+        """,
+        (conversation_id,),
+    )
+    past_rows = cursor.fetchall()
+
+    # OpenAI API に渡す形式:
+    # [{"role": "system", "content": "..."},
+    #  {"role": "user", "content": "..."},
+    #  {"role": "assistant", "content": "..."}, ...]
+    messages_for_api = [
+        {"role": "system", "content": conversation["system_prompt"]},
+    ]
+    for row in past_rows:
+        messages_for_api.append({"role": row["role"], "content": row["content"]})
+
+    # 4. OpenAI API を呼び出す
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages_for_api,
+            reasoning_effort=REASONING_EFFORT,
         )
-        conn.commit()
-
-        # 3. この会話の過去メッセージを全部取り出す(今追加したユーザーメッセージも含む)
-        cursor.execute(
-            """
-            SELECT role, content
-            FROM messages
-            WHERE conversation_id = ?
-            ORDER BY id
-            """,
-            (conversation_id,),
+    except Exception as e:
+        # API呼び出し失敗
+        conn.close()
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI APIの呼び出しに失敗しました: {e}",
         )
-        past_rows = cursor.fetchall()
 
-        # OpenAI API に渡す形式:
-        # [{"role": "system", "content": "..."},
-        #  {"role": "user", "content": "..."},
-        #  {"role": "assistant", "content": "..."}, ...]
-        messages_for_api = [
-            {"role": "system", "content": conversation["system_prompt"]},
-        ]
-        for row in past_rows:
-            messages_for_api.append({"role": row["role"], "content": row["content"]})
+    # AIの返答テキストを取り出す
+    assistant_content = response.choices[0].message.content
 
-        # 4. OpenAI API を呼び出す
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages_for_api,
-                reasoning_effort=REASONING_EFFORT,
-            )
-        except Exception as e:
-            # API呼び出し失敗
-            raise HTTPException(
-                status_code=500,
-                detail=f"AI APIの呼び出しに失敗しました: {e}",
-            )
+    # 5. AIの返答をDBに保存
+    cursor.execute(
+        "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
+        (conversation_id, "assistant", assistant_content),
+    )
+    conn.commit()
+    assistant_message_id = cursor.lastrowid
 
-        # AIの返答テキストを取り出す
-        assistant_content = response.choices[0].message.content
+    conn.close()
 
-        # 5. AIの返答をDBに保存
-        cursor.execute(
-            "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-            (conversation_id, "assistant", assistant_content),
-        )
-        conn.commit()
-        assistant_message_id = cursor.lastrowid
-
-        # 6. クライアントに返す
-        return {
-            "id": assistant_message_id,
-            "role": "assistant",
-            "content": assistant_content,
-        }
+    # 6. クライアントに返す
+    return {
+        "id": assistant_message_id,
+        "role": "assistant",
+        "content": assistant_content,
+    }
 
 
 # --- 静的ファイル配信 ---

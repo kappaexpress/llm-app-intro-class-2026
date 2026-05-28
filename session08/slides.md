@@ -66,17 +66,7 @@ ChatGPT風の「複数会話を切り替えて使える」chat-app を **完成*
 - サーバ再起動 / ブラウザリロードしても会話が消えない状態まで来た
 - でも… **1つの会話しか持てない**
 
-```
-messages テーブル
-┌────┬──────────┬─────────────┬─────────────┐
-│ id │ role     │ content     │ created_at  │
-├────┼──────────┼─────────────┼─────────────┤
-│ 1  │ user     │ こんにちは  │ ...         │
-│ 2  │ assistant│ こんにちは  │ ...         │
-│ 3  │ user     │ Pythonとは? │ ...         │
-└────┴──────────┴─────────────┴─────────────┘
-                ↑ 全部ひとつなぎ。話題を分けたい!
-```
+![h:440](images/messages-table.svg)
 
 ---
 
@@ -100,21 +90,7 @@ messages テーブル
 
 # 完成形のイメージ
 
-```
-┌─────────────┬──────────────────────────────────┐
-│             │                                  │
-│ + 新しい会話│   ┌─────────────────┐            │
-│             │   │ Pythonとは?     │  (user)    │
-│ Pythonの質問│   └─────────────────┘            │
-│ ・旅行プラン│                                  │
-│ ・雑談      │   ┌──────────────────────┐       │
-│ ・コード相談│   │ Pythonは...          │ (AI)  │
-│             │   └──────────────────────┘       │
-│             │                                  │
-│             │   [メッセージを入力...] [送信]   │
-└─────────────┴──────────────────────────────────┘
-   サイドバー         チャットエリア
-```
+![h:440](images/sidebar-chat-layout.svg)
 
 ChatGPT / Claude の Web 画面と同じレイアウト
 
@@ -243,19 +219,23 @@ class MessageCreate(BaseModel):
 ```python
 @app.get("/api/conversations")
 def get_conversations():
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, title, created_at
-            FROM conversations
-            ORDER BY id DESC
-        """)
-        rows = cursor.fetchall()
-        return [
-            {"id": r["id"], "title": r["title"],
-             "created_at": r["created_at"]}
-            for r in rows
-        ]
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, title, created_at
+        FROM conversations
+        ORDER BY id DESC
+    """)
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [
+        {"id": r["id"], "title": r["title"],
+         "created_at": r["created_at"]}
+        for r in rows
+    ]
 ```
 
 `ORDER BY id DESC` で新しい会話が上にくる (ChatGPT と同じ)
@@ -267,15 +247,20 @@ def get_conversations():
 ```python
 @app.post("/api/conversations", status_code=201)
 def create_conversation(conversation: ConversationCreate):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO conversations (title, system_prompt) "
-            "VALUES (?, ?)",
-            (conversation.title, conversation.system_prompt),
-        )
-        conn.commit()
-        return {"id": cursor.lastrowid, "title": conversation.title}
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO conversations (title, system_prompt) "
+        "VALUES (?, ?)",
+        (conversation.title, conversation.system_prompt),
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+
+    conn.close()
+    return {"id": new_id, "title": conversation.title}
 ```
 
 - `status_code=201`: 「リソースが作成された」を意味する HTTP ステータス
@@ -288,22 +273,27 @@ def create_conversation(conversation: ConversationCreate):
 ```python
 @app.delete("/api/conversations/{conversation_id}")
 def delete_conversation(conversation_id: int):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        # 存在チェック
-        cursor.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
-        )
-        if cursor.fetchone() is None:
-            raise HTTPException(404, "Conversation not found")
-        # 中のメッセージを先に消す
-        cursor.execute(
-            "DELETE FROM messages WHERE conversation_id = ?",
-            (conversation_id,))
-        cursor.execute(
-            "DELETE FROM conversations WHERE id = ?", (conversation_id,))
-        conn.commit()
-        return {"message": "Conversation deleted", "id": conversation_id}
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # 存在チェック
+    cursor.execute(
+        "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+    )
+    if cursor.fetchone() is None:
+        conn.close()
+        raise HTTPException(404, "Conversation not found")
+    # 中のメッセージを先に消す
+    cursor.execute(
+        "DELETE FROM messages WHERE conversation_id = ?",
+        (conversation_id,))
+    cursor.execute(
+        "DELETE FROM conversations WHERE id = ?", (conversation_id,))
+    conn.commit()
+
+    conn.close()
+    return {"message": "Conversation deleted", "id": conversation_id}
 ```
 
 **子 (messages) → 親 (conversations) の順** で消すのがコツ
@@ -315,21 +305,27 @@ def delete_conversation(conversation_id: int):
 ```python
 @app.get("/api/conversations/{conversation_id}/messages")
 def get_messages(conversation_id: int):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        # 会話が存在するかチェック
-        cursor.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-        if cursor.fetchone() is None:
-            raise HTTPException(404, "Conversation not found")
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT id, role, content, created_at
-            FROM messages
-            WHERE conversation_id = ?
-            ORDER BY id
-        """, (conversation_id,))
-        return [dict(r) for r in cursor.fetchall()]
+    # 会話が存在するかチェック
+    cursor.execute(
+        "SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    if cursor.fetchone() is None:
+        conn.close()
+        raise HTTPException(404, "Conversation not found")
+
+    cursor.execute("""
+        SELECT id, role, content, created_at
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY id
+    """, (conversation_id,))
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [dict(r) for r in rows]
 ```
 
 `WHERE conversation_id = ?` で **その会話だけ** に絞り込む
@@ -341,21 +337,24 @@ def get_messages(conversation_id: int):
 ```python
 @app.post("/api/conversations/{conversation_id}/messages", status_code=201)
 def send_message(conversation_id: int, user_message: MessageCreate):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        # 1. 会話の存在チェック + system_prompt を取り出す
-        cursor.execute(
-            "SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-        conversation = cursor.fetchone()
-        if conversation is None:
-            raise HTTPException(404, "Conversation not found")
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        # 2. ユーザメッセージを保存
-        cursor.execute(
-            "INSERT INTO messages (conversation_id, role, content) "
-            "VALUES (?, ?, ?)",
-            (conversation_id, "user", user_message.content))
-        conn.commit()
+    # 1. 会話の存在チェック + system_prompt を取り出す
+    cursor.execute(
+        "SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    conversation = cursor.fetchone()
+    if conversation is None:
+        conn.close()
+        raise HTTPException(404, "Conversation not found")
+
+    # 2. ユーザメッセージを保存
+    cursor.execute(
+        "INSERT INTO messages (conversation_id, role, content) "
+        "VALUES (?, ?, ?)",
+        (conversation_id, "user", user_message.content))
+    conn.commit()
 ```
 
 ここまでが **保存** ステップ
@@ -365,52 +364,41 @@ def send_message(conversation_id: int, user_message: MessageCreate):
 # エンドポイント実装⑤: メッセージ送信 (後半)
 
 ```python
-        # 3. この会話の過去メッセージ全部を取り出す
-        cursor.execute("""
-            SELECT role, content FROM messages
-            WHERE conversation_id = ? ORDER BY id
-        """, (conversation_id,))
-        past = cursor.fetchall()
+    # 3. この会話の過去メッセージ全部を取り出す
+    cursor.execute("""
+        SELECT role, content FROM messages
+        WHERE conversation_id = ? ORDER BY id
+    """, (conversation_id,))
+    past = cursor.fetchall()
 
-        # 4. system + 過去メッセージ全部を API に送る
-        messages_for_api = [
-            {"role": "system", "content": conversation["system_prompt"]},
-        ] + [{"role": r["role"], "content": r["content"]} for r in past]
+    # 4. system + 過去メッセージ全部を API に送る
+    messages_for_api = [
+        {"role": "system", "content": conversation["system_prompt"]},
+    ] + [{"role": r["role"], "content": r["content"]} for r in past]
 
-        response = client.chat.completions.create(
-            model=MODEL_NAME, messages=messages_for_api,
-            reasoning_effort=REASONING_EFFORT)
+    response = client.chat.completions.create(
+        model=MODEL_NAME, messages=messages_for_api,
+        reasoning_effort=REASONING_EFFORT)
 
-        # 5. AI の返答を保存して返す
-        assistant_content = response.choices[0].message.content
-        cursor.execute(
-            "INSERT INTO messages (conversation_id, role, content) "
-            "VALUES (?, ?, ?)",
-            (conversation_id, "assistant", assistant_content))
-        conn.commit()
-        return {"id": cursor.lastrowid, "role": "assistant",
-                "content": assistant_content}
+    # 5. AI の返答を保存して返す
+    assistant_content = response.choices[0].message.content
+    cursor.execute(
+        "INSERT INTO messages (conversation_id, role, content) "
+        "VALUES (?, ?, ?)",
+        (conversation_id, "assistant", assistant_content))
+    conn.commit()
+    assistant_id = cursor.lastrowid
+
+    conn.close()
+    return {"id": assistant_id, "role": "assistant",
+            "content": assistant_content}
 ```
 
 ---
 
 # 1回の送信で起きる流れ (図解)
 
-```
-[ブラウザ]
-   │ POST /api/conversations/5/messages
-   │ { "content": "Pythonとは?" }
-   ▼
-[FastAPI]
-   ① 会話5の system_prompt を読む
-   ② user メッセージを DB に INSERT
-   ③ 会話5の過去メッセージを全部 SELECT
-   ④ messages_for_api = [system, user, asst, user, ..., 今のuser]
-   ⑤ OpenAI に送信
-   ⑥ 返答を DB に INSERT
-   ▼
-[ブラウザ] レスポンスを受け取って画面に表示
-```
+![h:480](images/conversation-api-flow.svg)
 
 「**毎回まるごと送る**」のは第6回と同じ。会話ごとに範囲を絞るだけ
 

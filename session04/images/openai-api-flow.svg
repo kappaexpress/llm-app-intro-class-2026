@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+  </defs>
+
+  <text x="600" y="45" text-anchor="middle" fill="#93c5fd" font-size="24" font-weight="bold">OpenAI API: HTTP 越しに 1往復</text>
+
+  <!-- Left: Client (自分のコード) -->
+  <rect x="60" y="180" width="320" height="220" rx="14" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="220" y="225" text-anchor="middle" fill="#dbeafe" font-size="22" font-weight="bold">自分のコード</text>
+  <text x="220" y="252" text-anchor="middle" fill="#93c5fd" font-size="15">(Python / JavaScript / curl ...)</text>
+
+  <rect x="80" y="280" width="280" height="100" rx="8" fill="#0f172a" stroke="#60a5fa" stroke-width="1.2"/>
+  <text x="95" y="308" fill="#93c5fd" font-size="14" font-family="monospace">client.chat.completions</text>
+  <text x="95" y="332" fill="#93c5fd" font-size="14" font-family="monospace">  .create(</text>
+  <text x="95" y="356" fill="#93c5fd" font-size="14" font-family="monospace">    model="gpt-5.4-nano",</text>
+  <text x="95" y="375" fill="#93c5fd" font-size="14" font-family="monospace">    messages=[...])</text>
+
+  <!-- Right: OpenAI cloud (Cyan) containing the model (Emerald) -->
+  <rect x="720" y="100" width="430" height="380" rx="14" fill="#155e75" fill-opacity="0.55" stroke="#06b6d4" stroke-width="2.5"/>
+  <text x="935" y="140" text-anchor="middle" fill="#cffafe" font-size="22" font-weight="bold">OpenAI のサーバ</text>
+  <text x="935" y="165" text-anchor="middle" fill="#7dd3fc" font-size="14">api.openai.com</text>
+
+  <!-- Nested model box (emerald) -->
+  <rect x="760" y="200" width="350" height="160" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+  <text x="935" y="240" text-anchor="middle" fill="#a7f3d0" font-size="22" font-weight="bold">モデル: gpt-5.4-nano</text>
+  <text x="935" y="275" text-anchor="middle" fill="#6ee7b7" font-size="15">次のトークンを 1 つずつ予測</text>
+  <text x="935" y="300" text-anchor="middle" fill="#6ee7b7" font-size="15">→ 文章を生成</text>
+  <text x="935" y="335" text-anchor="middle" fill="#6ee7b7" font-size="14">(でかいニューラルネット)</text>
+
+  <text x="935" y="405" text-anchor="middle" fill="#cffafe" font-size="15">生成された文章を JSON にして返す</text>
+  <rect x="760" y="425" width="350" height="38" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1.2"/>
+  <text x="775" y="450" fill="#a7f3d0" font-size="13" font-family="monospace">{ "choices": [ { "message": ... } ] }</text>
+
+  <!-- Forward arrow (HTTP リクエスト) -->
+  <line x1="385" y1="245" x2="715" y2="245" stroke="#60a5fa" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="430" y="200" width="240" height="38" rx="6" fill="#1e3a8a" fill-opacity="0.7" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="550" y="225" text-anchor="middle" fill="#dbeafe" font-size="15" font-weight="bold">HTTP リクエスト</text>
+
+  <!-- Return arrow (HTTP レスポンス) -->
+  <line x1="715" y1="345" x2="385" y2="345" stroke="#34d399" stroke-width="3" marker-end="url(#arrow-emerald)"/>
+  <rect x="410" y="355" width="280" height="38" rx="6" fill="#064e3b" fill-opacity="0.7" stroke="#10b981" stroke-width="1.2"/>
+  <text x="550" y="380" text-anchor="middle" fill="#a7f3d0" font-size="15" font-weight="bold">HTTP レスポンス (生成された文章)</text>
+
+  <!-- Bottom note -->
+  <rect x="60" y="510" width="1090" height="50" rx="10" fill="#1e3a8a" fill-opacity="0.30" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="605" y="542" text-anchor="middle" fill="#dbeafe" font-size="16">サーバーもブラウザもまだ無し — Python から直接 OpenAI に話しかける</text>
+</svg>

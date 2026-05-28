@@ -68,14 +68,7 @@ Python から OpenAI API を呼んで、返答が返ってくる体験をする
 - 自分のプログラムから呼べる = 自分のアプリに AI を組み込める
 - 言語は何でもよい(Python / JavaScript / curl ...)。今日は Python SDK を使う
 
-```
-[自分のコード]  ──HTTPリクエスト──▶  [OpenAI のサーバ]
-                                         │
-                                         ▼
-                                     [モデル: gpt-5.4-nano]
-                                         │
-[自分のコード]  ◀──HTTPレスポンス──  [生成された文章]
-```
+![h:420](images/openai-api-flow.svg)
 
 ---
 
