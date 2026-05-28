@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+    <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Left container: Browser (Client) - blue (primary) -->
+  <rect x="70" y="50" width="600" height="720" rx="14" ry="14" fill="#1e3a8a" fill-opacity="0.45" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="370" y="115" text-anchor="middle" fill="#dbeafe" font-size="32" font-weight="bold">ブラウザ（クライアント）</text>
+
+  <!-- index.html -->
+  <rect x="120" y="200" width="500" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="370" y="245" text-anchor="middle" fill="#dbeafe" font-size="26" font-weight="bold">index.html</text>
+  <text x="370" y="280" text-anchor="middle" fill="#93c5fd" font-size="20">画面の構造（HTML）</text>
+
+  <!-- app.js -->
+  <rect x="120" y="370" width="500" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="370" y="415" text-anchor="middle" fill="#dbeafe" font-size="26" font-weight="bold">app.js</text>
+  <text x="370" y="450" text-anchor="middle" fill="#93c5fd" font-size="20">操作・API通信（JS）</text>
+
+  <!-- style.css -->
+  <rect x="120" y="540" width="500" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="370" y="585" text-anchor="middle" fill="#dbeafe" font-size="26" font-weight="bold">style.css</text>
+  <text x="370" y="620" text-anchor="middle" fill="#93c5fd" font-size="20">見た目の装飾（CSS）</text>
+
+  <!-- Bottom label (left) -->
+  <text x="370" y="730" text-anchor="middle" fill="#cbd5e1" font-size="22">ユーザーのPC上で実行</text>
+
+  <!-- Right container: Server - cyan (cloud / different category) -->
+  <rect x="740" y="50" width="600" height="720" rx="14" ry="14" fill="#155e75" fill-opacity="0.45" stroke="#06b6d4" stroke-width="2.5"/>
+  <text x="1040" y="115" text-anchor="middle" fill="#cffafe" font-size="32" font-weight="bold">サーバー</text>
+
+  <!-- 静的ファイル配信 (slate - subdued) -->
+  <rect x="790" y="200" width="500" height="110" rx="10" ry="10" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="1040" y="245" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="bold">静的ファイル配信</text>
+  <text x="1040" y="280" text-anchor="middle" fill="#cbd5e1" font-size="20">static/ フォルダ</text>
+
+  <!-- main.py (emerald - active code) -->
+  <rect x="790" y="370" width="500" height="110" rx="10" ry="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="1040" y="415" text-anchor="middle" fill="#a7f3d0" font-size="26" font-weight="bold">main.py</text>
+  <text x="1040" y="450" text-anchor="middle" fill="#a7f3d0" font-size="20">FastAPI アプリ本体</text>
+
+  <!-- SQLite (amber - data storage) -->
+  <rect x="790" y="540" width="500" height="110" rx="10" ry="10" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="1040" y="585" text-anchor="middle" fill="#fde68a" font-size="26" font-weight="bold">SQLite</text>
+  <text x="1040" y="620" text-anchor="middle" fill="#fde68a" font-size="20">データベース（.db）</text>
+
+  <!-- Bottom label (right) -->
+  <text x="1040" y="730" text-anchor="middle" fill="#cbd5e1" font-size="22">サーバーマシン上で実行</text>
+
+  <!-- Arrows between containers -->
+  <!-- 初回配信: 静的ファイル配信 -> index.html (slate dashed) -->
+  <line x1="790" y1="255" x2="625" y2="255" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#arrow-slate)"/>
+  <text x="708" y="245" text-anchor="middle" fill="#cbd5e1" font-size="20">初回配信</text>
+
+  <!-- HTTP リクエスト: app.js -> main.py (blue - primary action) -->
+  <line x1="625" y1="410" x2="785" y2="410" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="705" y="400" text-anchor="middle" fill="#93c5fd" font-size="20">HTTP リクエスト</text>
+
+  <!-- JSON レスポンス: main.py -> app.js (emerald - response) -->
+  <line x1="785" y1="450" x2="625" y2="450" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
+  <text x="705" y="478" text-anchor="middle" fill="#a7f3d0" font-size="20">JSON レスポンス</text>
+
+  <!-- SQL: main.py -> SQLite (slate) -->
+  <line x1="1040" y1="485" x2="1040" y2="535" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-slate)"/>
+  <text x="1170" y="515" text-anchor="middle" fill="#cbd5e1" font-size="20">SQL</text>
+</svg>
