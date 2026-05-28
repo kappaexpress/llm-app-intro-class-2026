@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 560" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+    <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <text x="650" y="40" text-anchor="middle" fill="#93c5fd" font-size="24" font-weight="bold">ブラウザ ⇄ FastAPI ⇄ SQLite の流れ (echo API)</text>
+
+  <!-- Browser -->
+  <rect x="40" y="100" width="320" height="380" rx="14" fill="#1e3a8a" fill-opacity="0.45" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="200" y="135" text-anchor="middle" fill="#dbeafe" font-size="20" font-weight="bold">ブラウザ</text>
+
+  <rect x="60" y="160" width="280" height="100" rx="8" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="200" y="183" text-anchor="middle" fill="#dbeafe" font-size="14" font-weight="bold">index.html / app.js</text>
+  <text x="75" y="208" fill="#93c5fd" font-size="13" font-family="monospace">form.addEventListener(...)</text>
+  <text x="75" y="228" fill="#93c5fd" font-size="13" font-family="monospace">await fetch("/api/echo", {</text>
+  <text x="75" y="248" fill="#93c5fd" font-size="13" font-family="monospace">  method: "POST", body: ...</text>
+
+  <rect x="60" y="280" width="280" height="80" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="200" y="305" text-anchor="middle" fill="#a7f3d0" font-size="14" font-weight="bold">画面表示</text>
+  <text x="200" y="330" text-anchor="middle" fill="#6ee7b7" font-size="13" font-family="monospace">el.textContent = data.echo</text>
+  <text x="200" y="350" text-anchor="middle" fill="#6ee7b7" font-size="11">(textContent で XSS対策)</text>
+
+  <text x="200" y="465" text-anchor="middle" fill="#cbd5e1" font-size="14">ユーザーが操作する画面</text>
+
+  <!-- Server -->
+  <rect x="450" y="100" width="400" height="380" rx="14" fill="#155e75" fill-opacity="0.45" stroke="#06b6d4" stroke-width="2.5"/>
+  <text x="650" y="135" text-anchor="middle" fill="#cffafe" font-size="20" font-weight="bold">FastAPI サーバー</text>
+
+  <!-- Pydantic validation -->
+  <rect x="470" y="160" width="360" height="80" rx="8" fill="#155e75" stroke="#06b6d4" stroke-width="1.5"/>
+  <text x="650" y="183" text-anchor="middle" fill="#cffafe" font-size="14" font-weight="bold">① Pydantic 自動バリデーション</text>
+  <text x="485" y="206" fill="#7dd3fc" font-size="13" font-family="monospace">class EchoRequest(BaseModel):</text>
+  <text x="485" y="226" fill="#7dd3fc" font-size="13" font-family="monospace">  message: str = Field(min_length=1)</text>
+
+  <!-- Endpoint -->
+  <rect x="470" y="255" width="360" height="80" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="650" y="278" text-anchor="middle" fill="#a7f3d0" font-size="14" font-weight="bold">② エンドポイント実行</text>
+  <text x="485" y="301" fill="#6ee7b7" font-size="13" font-family="monospace">@app.post("/api/echo")</text>
+  <text x="485" y="321" fill="#6ee7b7" font-size="13" font-family="monospace">def echo(req): return {"echo": ...}</text>
+
+  <!-- Static -->
+  <rect x="470" y="350" width="360" height="60" rx="8" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="650" y="376" text-anchor="middle" fill="#cbd5e1" font-size="14" font-weight="bold">StaticFiles で index.html 配信</text>
+  <text x="650" y="397" text-anchor="middle" fill="#cbd5e1" font-size="12" font-family="monospace">app.mount("/", StaticFiles(...))</text>
+
+  <text x="650" y="465" text-anchor="middle" fill="#cbd5e1" font-size="14">python main.py で起動</text>
+
+  <!-- SQLite -->
+  <rect x="940" y="100" width="320" height="380" rx="14" fill="#78350f" fill-opacity="0.4" stroke="#f59e0b" stroke-width="2.5"/>
+  <text x="1100" y="135" text-anchor="middle" fill="#fde68a" font-size="20" font-weight="bold">SQLite (chat.db)</text>
+  <text x="1100" y="158" text-anchor="middle" fill="#fcd34d" font-size="13">第7回から本格活用</text>
+
+  <rect x="960" y="180" width="280" height="80" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="1100" y="203" text-anchor="middle" fill="#fde68a" font-size="14" font-weight="bold">CREATE TABLE / INSERT</text>
+  <text x="975" y="227" fill="#fde68a" font-size="13" font-family="monospace">conn = sqlite3.connect(...)</text>
+  <text x="975" y="247" fill="#fde68a" font-size="13" font-family="monospace">cursor.execute("INSERT ...", (?,))</text>
+
+  <rect x="960" y="280" width="280" height="80" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="1100" y="303" text-anchor="middle" fill="#fde68a" font-size="14" font-weight="bold">SELECT (履歴を読み出す)</text>
+  <text x="975" y="327" fill="#fde68a" font-size="13" font-family="monospace">cursor.execute("SELECT ...")</text>
+  <text x="975" y="347" fill="#fde68a" font-size="13" font-family="monospace">rows = cursor.fetchall()</text>
+
+  <text x="1100" y="465" text-anchor="middle" fill="#fcd34d" font-size="14">ファイル1個で完結する軽量DB</text>
+
+  <!-- Arrows: Browser -> Server -->
+  <line x1="360" y1="220" x2="448" y2="220" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="404" y="210" text-anchor="middle" fill="#93c5fd" font-size="13">POST /api/echo</text>
+  <text x="404" y="240" text-anchor="middle" fill="#93c5fd" font-size="12">{"message": "..."}</text>
+
+  <!-- Server -> Browser -->
+  <line x1="448" y1="305" x2="360" y2="305" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
+  <text x="404" y="295" text-anchor="middle" fill="#a7f3d0" font-size="13">200 OK</text>
+  <text x="404" y="325" text-anchor="middle" fill="#a7f3d0" font-size="12">{"echo": "..."}</text>
+
+  <!-- Server -> SQLite -->
+  <line x1="852" y1="220" x2="938" y2="220" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-slate)"/>
+  <text x="895" y="210" text-anchor="middle" fill="#cbd5e1" font-size="13">保存</text>
+
+  <line x1="938" y1="305" x2="852" y2="305" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-slate)"/>
+  <text x="895" y="295" text-anchor="middle" fill="#cbd5e1" font-size="13">読み出し</text>
+
+  <!-- Bottom note -->
+  <rect x="60" y="510" width="1180" height="40" rx="8" fill="#1e3a8a" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="650" y="536" text-anchor="middle" fill="#dbeafe" font-size="15">この骨格に、第4回以降「OpenAI API 呼び出し」を サーバー側に足していくだけ</text>
+</svg>

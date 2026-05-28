@@ -52,22 +52,23 @@ style: |
 
 ---
 
+## chat-app の全体像
+
+![h:480](../share-images/overview.svg)
+
+今日は右(OpenAI)には触れず、左(ブラウザ)と中央(FastAPI/SQLite)の骨格を復習する
+
+---
+
 ## なぜ今、復習回？
 
 - 第1回・第2回は **コードを書かずに** LLMの世界観とプロンプトを学んだ
 - 第4回からはガッツリ Python / FastAPI / JavaScript を書く
 - 「あれ、fetch ってどう書くんだっけ?」を **今日のうちに** 解消しておく
 
-このコースを通して作る `chat-app` も結局は:
+![h:280](images/request-response-flow.svg)
 
-```
-[ブラウザ] --fetch--> [FastAPI] --SDK--> [OpenAI API]
-                          |
-                       SQLite
-```
-
-前コースの TODOアプリと **構造はほぼ同じ**。
-真ん中の処理がCRUDからLLM呼び出しに変わるだけ。
+前コースの TODOアプリと **構造はほぼ同じ**。真ん中の処理がCRUDからLLM呼び出しに変わるだけ
 
 ---
 

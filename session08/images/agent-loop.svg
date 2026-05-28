@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <text x="600" y="40" text-anchor="middle" fill="#93c5fd" font-size="24" font-weight="bold">エージェント — Tool use を「ループ」で回し、自律的に動く</text>
+
+  <!-- User goal -->
+  <rect x="40" y="80" width="280" height="80" rx="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2"/>
+  <text x="180" y="108" text-anchor="middle" fill="#dbeafe" font-size="14" font-weight="bold">ユーザの目標 (1行で渡す)</text>
+  <text x="180" y="135" text-anchor="middle" fill="#dbeafe" font-size="13">「来週の出張のホテルを予約して」</text>
+
+  <line x1="180" y1="165" x2="180" y2="200" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- Center: agent loop diagram -->
+  <!-- Big circle indicating loop -->
+  <circle cx="600" cy="320" r="180" fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="10 6"/>
+
+  <!-- ① 思考 (top) -->
+  <rect x="495" y="200" width="210" height="80" rx="40" fill="#155e75" stroke="#06b6d4" stroke-width="2.5"/>
+  <text x="600" y="230" text-anchor="middle" fill="#cffafe" font-size="15" font-weight="bold">① 思考 (Reasoning)</text>
+  <text x="600" y="253" text-anchor="middle" fill="#cffafe" font-size="12">「次に何をすべきか」</text>
+  <text x="600" y="270" text-anchor="middle" fill="#cffafe" font-size="12">を計画</text>
+
+  <!-- ② ツール選択 (right) -->
+  <rect x="720" y="290" width="190" height="80" rx="40" fill="#78350f" stroke="#f59e0b" stroke-width="2.5"/>
+  <text x="815" y="320" text-anchor="middle" fill="#fde68a" font-size="15" font-weight="bold">② ツール呼出</text>
+  <text x="815" y="343" text-anchor="middle" fill="#fde68a" font-size="12">calendar / search /</text>
+  <text x="815" y="360" text-anchor="middle" fill="#fde68a" font-size="12">book_hotel ...</text>
+
+  <!-- ③ 結果観察 (bottom) -->
+  <rect x="495" y="380" width="210" height="80" rx="40" fill="#064e3b" stroke="#10b981" stroke-width="2.5"/>
+  <text x="600" y="410" text-anchor="middle" fill="#a7f3d0" font-size="15" font-weight="bold">③ 結果観察</text>
+  <text x="600" y="432" text-anchor="middle" fill="#6ee7b7" font-size="12">ツール結果を読み</text>
+  <text x="600" y="449" text-anchor="middle" fill="#6ee7b7" font-size="12">次のアクションに反映</text>
+
+  <!-- ④ 完了判定 (left) -->
+  <rect x="290" y="290" width="190" height="80" rx="40" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="385" y="320" text-anchor="middle" fill="#dbeafe" font-size="15" font-weight="bold">④ 完了判定</text>
+  <text x="385" y="343" text-anchor="middle" fill="#dbeafe" font-size="12">目標達成?</text>
+  <text x="385" y="360" text-anchor="middle" fill="#dbeafe" font-size="12">No → ①に戻る</text>
+
+  <!-- Arrows on loop -->
+  <path d="M 700 250 Q 760 270 770 290" fill="none" stroke="#06b6d4" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <path d="M 770 370 Q 760 395 700 415" fill="none" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+  <path d="M 495 415 Q 450 395 440 370" fill="none" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
+  <path d="M 440 290 Q 460 245 495 240" fill="none" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- arrow into loop from user -->
+  <line x1="180" y1="200" x2="290" y2="320" stroke="#60a5fa" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-blue)"/>
+
+  <!-- Exit -->
+  <path d="M 600 460 L 600 510" fill="none" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
+  <text x="640" y="490" fill="#a7f3d0" font-size="13">目標達成 → 終了</text>
+
+  <!-- Right side: example trace -->
+  <rect x="950" y="100" width="230" height="380" rx="12" fill="#1e3a8a" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="1065" y="130" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="bold">トレース例</text>
+
+  <text x="965" y="160" fill="#cffafe" font-size="12">①思考: 「まず日程確認」</text>
+  <text x="965" y="180" fill="#fde68a" font-size="12">②呼出: calendar.get_events</text>
+  <text x="965" y="200" fill="#a7f3d0" font-size="12">③観察: 「7-8日が出張」</text>
+  <line x1="970" y1="210" x2="1170" y2="210" stroke="#94a3b8" stroke-width="0.5"/>
+
+  <text x="965" y="230" fill="#cffafe" font-size="12">①思考: 「ホテル候補検索」</text>
+  <text x="965" y="250" fill="#fde68a" font-size="12">②呼出: search(city, date)</text>
+  <text x="965" y="270" fill="#a7f3d0" font-size="12">③観察: 「3軒ヒット」</text>
+  <line x1="970" y1="280" x2="1170" y2="280" stroke="#94a3b8" stroke-width="0.5"/>
+
+  <text x="965" y="300" fill="#cffafe" font-size="12">①思考: 「最安を確認」</text>
+  <text x="965" y="320" fill="#fde68a" font-size="12">②呼出: book_hotel(id=A)</text>
+  <text x="965" y="340" fill="#a7f3d0" font-size="12">③観察: 「予約完了」</text>
+  <line x1="970" y1="350" x2="1170" y2="350" stroke="#94a3b8" stroke-width="0.5"/>
+
+  <text x="965" y="370" fill="#cffafe" font-size="12">①思考: 「ユーザに報告」</text>
+  <text x="1065" y="395" text-anchor="middle" fill="#86efac" font-size="13" font-weight="bold">→ 終了</text>
+
+  <text x="1065" y="430" text-anchor="middle" fill="#93c5fd" font-size="13" font-weight="bold">これが「自律的」の正体</text>
+  <text x="1065" y="450" text-anchor="middle" fill="#dbeafe" font-size="12">Tool use × 反復 ×</text>
+  <text x="1065" y="467" text-anchor="middle" fill="#dbeafe" font-size="12">Reasoning モデル</text>
+
+  <!-- Bottom note -->
+  <rect x="40" y="525" width="1140" height="40" rx="8" fill="#1e3a8a" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="600" y="552" text-anchor="middle" fill="#dbeafe" font-size="14">高 reasoning_effort が本領を発揮する領域 — 「次に何をするか」を数手先まで読む必要がある</text>
+</svg>

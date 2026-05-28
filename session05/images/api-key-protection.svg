@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 580" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <text x="650" y="40" text-anchor="middle" fill="#93c5fd" font-size="24" font-weight="bold">なぜバックエンドを挟むのか — APIキー保護</text>
+
+  <!-- ===== Bad case ===== -->
+  <text x="325" y="80" text-anchor="middle" fill="#fca5a5" font-size="20" font-weight="bold">❌ 危険: ブラウザから直接 OpenAI を呼ぶ</text>
+
+  <!-- Browser (bad) -->
+  <rect x="40" y="105" width="240" height="170" rx="12" fill="#7f1d1d" fill-opacity="0.55" stroke="#f87171" stroke-width="2.5"/>
+  <text x="160" y="135" text-anchor="middle" fill="#fecaca" font-size="16" font-weight="bold">ブラウザ (JS)</text>
+
+  <rect x="55" y="155" width="210" height="105" rx="6" fill="#0f172a" stroke="#f87171" stroke-width="1.2"/>
+  <text x="65" y="178" fill="#fecaca" font-size="12" font-family="monospace">fetch("api.openai.com",</text>
+  <text x="65" y="198" fill="#fecaca" font-size="12" font-family="monospace">  headers: {</text>
+  <text x="65" y="218" fill="#fbbf24" font-size="12" font-family="monospace">    Auth: "Bearer sk-..."</text>
+  <text x="65" y="238" fill="#fecaca" font-size="12" font-family="monospace">  })</text>
+  <text x="65" y="253" fill="#fca5a5" font-size="11">← F12 で誰でも見える</text>
+
+  <!-- Arrow direct -->
+  <line x1="285" y1="190" x2="380" y2="190" stroke="#f87171" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <text x="333" y="180" text-anchor="middle" fill="#fca5a5" font-size="13">キー付き直叩き</text>
+
+  <!-- OpenAI -->
+  <rect x="385" y="125" width="220" height="135" rx="12" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+  <text x="495" y="160" text-anchor="middle" fill="#a7f3d0" font-size="16" font-weight="bold">OpenAI API</text>
+  <text x="495" y="190" text-anchor="middle" fill="#6ee7b7" font-size="13">gpt-5.4-nano</text>
+  <text x="495" y="225" text-anchor="middle" fill="#6ee7b7" font-size="13">課金は</text>
+  <text x="495" y="245" text-anchor="middle" fill="#fca5a5" font-size="13" font-weight="bold">「鍵の持ち主」</text>
+
+  <!-- Attacker -->
+  <rect x="40" y="305" width="565" height="80" rx="10" fill="#7f1d1d" stroke="#f87171" stroke-width="2"/>
+  <text x="322" y="330" text-anchor="middle" fill="#fecaca" font-size="14" font-weight="bold">⚠ 結果</text>
+  <text x="322" y="352" text-anchor="middle" fill="#fecaca" font-size="13">第三者がキーを抜いて API叩き放題 → 課金は <tspan font-weight="bold">あなた持ち</tspan></text>
+  <text x="322" y="372" text-anchor="middle" fill="#fca5a5" font-size="13">月予算上限を超えるとアプリ停止 / 最悪は巨額請求</text>
+
+  <!-- ===== Good case ===== -->
+  <text x="970" y="80" text-anchor="middle" fill="#a7f3d0" font-size="20" font-weight="bold">✅ 正しい: 自分のバックエンドを挟む</text>
+
+  <!-- Browser (good) -->
+  <rect x="660" y="105" width="180" height="170" rx="12" fill="#1e3a8a" fill-opacity="0.55" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="750" y="135" text-anchor="middle" fill="#dbeafe" font-size="16" font-weight="bold">ブラウザ (JS)</text>
+  <rect x="675" y="155" width="150" height="100" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="685" y="178" fill="#dbeafe" font-size="12" font-family="monospace">fetch("/api/chat",</text>
+  <text x="685" y="198" fill="#dbeafe" font-size="12" font-family="monospace">  {message: ...})</text>
+  <text x="685" y="223" fill="#86efac" font-size="11">キーは知らない</text>
+  <text x="685" y="240" fill="#86efac" font-size="11">自サーバだけ知る</text>
+
+  <line x1="845" y1="190" x2="905" y2="190" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="875" y="180" text-anchor="middle" fill="#93c5fd" font-size="12">POST</text>
+
+  <!-- FastAPI -->
+  <rect x="910" y="105" width="200" height="170" rx="12" fill="#155e75" fill-opacity="0.6" stroke="#06b6d4" stroke-width="2.5"/>
+  <text x="1010" y="135" text-anchor="middle" fill="#cffafe" font-size="16" font-weight="bold">FastAPI</text>
+  <rect x="925" y="155" width="170" height="100" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1.2"/>
+  <text x="935" y="178" fill="#cffafe" font-size="12" font-family="monospace">client = OpenAI()</text>
+  <text x="935" y="198" fill="#fbbf24" font-size="12" font-family="monospace">os.environ["OPENAI_</text>
+  <text x="935" y="216" fill="#fbbf24" font-size="12" font-family="monospace">  API_KEY"] を読む</text>
+  <text x="935" y="245" fill="#86efac" font-size="11">サーバ側だけが鍵を持つ</text>
+
+  <line x1="1115" y1="190" x2="1175" y2="190" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- OpenAI (good) -->
+  <rect x="1180" y="125" width="100" height="135" rx="12" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+  <text x="1230" y="155" text-anchor="middle" fill="#a7f3d0" font-size="14" font-weight="bold">OpenAI</text>
+  <text x="1230" y="175" text-anchor="middle" fill="#a7f3d0" font-size="14" font-weight="bold">API</text>
+  <text x="1230" y="210" text-anchor="middle" fill="#6ee7b7" font-size="12">鍵を見て</text>
+  <text x="1230" y="228" text-anchor="middle" fill="#6ee7b7" font-size="12">課金</text>
+
+  <!-- Return arrows -->
+  <line x1="1175" y1="240" x2="1115" y2="240" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)" stroke-dasharray="6 4"/>
+  <line x1="905" y1="240" x2="845" y2="240" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)" stroke-dasharray="6 4"/>
+
+  <!-- Bottom good box -->
+  <rect x="660" y="305" width="620" height="80" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+  <text x="970" y="330" text-anchor="middle" fill="#a7f3d0" font-size="14" font-weight="bold">✅ 結果</text>
+  <text x="970" y="352" text-anchor="middle" fill="#a7f3d0" font-size="13">ブラウザは OpenAI を知らない / キーはサーバの環境変数のみ</text>
+  <text x="970" y="372" text-anchor="middle" fill="#86efac" font-size="13">レート制限・ログ・監視・認証もこのレイヤーで挟める</text>
+
+  <!-- Bottom mantra -->
+  <rect x="40" y="430" width="1240" height="120" rx="10" fill="#1e3a8a" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="660" y="465" text-anchor="middle" fill="#dbeafe" font-size="17" font-weight="bold">原則: 「鍵は ブラウザに出さない。サーバの 環境変数 にだけ存在する」</text>
+  <text x="660" y="495" text-anchor="middle" fill="#93c5fd" font-size="14">①コードに直書きしない  ②`git push` 前に `git status` で確認  ③ Network タブで /api/chat に Authorization が無いことを確認</text>
+  <text x="660" y="525" text-anchor="middle" fill="#fcd34d" font-size="14">「APIキー保護①」= そもそもコミットしない /  「APIキー保護②」= バックエンドで持つ (今日のテーマ)</text>
+</svg>

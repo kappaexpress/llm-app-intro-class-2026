@@ -52,6 +52,14 @@ ChatGPT風の「複数会話を切り替えて使える」chat-app を **完成*
 
 ---
 
+## chat-app の全体像
+
+![h:480](../share-images/overview.svg)
+
+今日は左に **サイドバー UI** を作り、中央に **conversations テーブル** を追加して完成させる
+
+---
+
 # 前回 (第7回) のおさらい
 
 - `messages` テーブルを作って **1つの会話を SQLite に永続化** した
@@ -114,19 +122,7 @@ ChatGPT / Claude の Web 画面と同じレイアウト
 
 # データモデルの拡張: 2テーブル構成
 
-第7回までは `messages` 1テーブルだった
-→ 第8回は `conversations` を **親**、`messages` を **子** にする
-
-```
-conversations (会話)        messages (発言)
-┌────┬──────────┐           ┌────┬───────────────┬──────┬─────────┐
-│ id │ title    │           │ id │conversation_id│ role │ content │
-├────┼──────────┤  1対多 →  ├────┼───────────────┼──────┼─────────┤
-│ 1  │ Python   │ ────────> │ 1  │ 1             │ user │ ...     │
-│ 2  │ 旅行     │           │ 2  │ 1             │ asst │ ...     │
-│ 3  │ 雑談     │           │ 3  │ 2             │ user │ ...     │
-└────┴──────────┘           └────┴───────────────┴──────┴─────────┘
-```
+![h:430](images/two-tables-relation.svg)
 
 **1つの会話 (conversation) は 複数のメッセージ (messages) を持つ**
 
@@ -815,19 +811,7 @@ reasoning_effort="high"  # 数秒〜十数秒待つが、深く考えた回答�
 
 # 発展① Tool use / Function calling
 
-「AI に外部の **ツール (関数)** を使わせる」 仕組み
-
-```
-[ユーザ] 「今日の東京の天気は?」
-   ↓
-[AI] ふつうに答えると → 「すみません、私はリアルタイム情報を持って...」
-   ↓
-[Tool use] AI が「get_weather(city='東京') を呼びたい」と申告
-   ↓
-[アプリ] 関数を実行 → {"temp": 18, "condition": "晴れ"}
-   ↓
-[AI] 「東京は晴れ、18度です」 と回答
-```
+![h:440](images/tool-use-flow.svg)
 
 LLM の弱点 (最新情報を知らない・計算が苦手) を **道具で補う**
 
@@ -884,17 +868,7 @@ response = client.chat.completions.create(
 
 # RAG のアーキテクチャ
 
-```
-[ドキュメント]
-     │ (事前準備: チャンク分割 → ベクトル化 → DBに保存)
-     ▼
-[Vector DB] (例: Chroma, pgvector, Pinecone)
-     ▲
-     │ 似たドキュメントを検索
-[質問] ──┐
-         ▼
-   [LLM (context: 質問 + 関連ドキュメント)] → 回答
-```
+![h:460](images/rag-flow.svg)
 
 - **ベクトル化** = テキストを意味的な数値ベクトルに変換すること (Embedding API)
 - 用途: 社内 FAQ、製品マニュアル、議事録検索、論文 Q&A 等
@@ -903,20 +877,7 @@ response = client.chat.completions.create(
 
 # 発展③ エージェント
 
-「AI が **自律的にタスクを進める**」 仕組み
-
-```
-[ユーザ] 「来週の出張のホテルを予約して」
-   ↓
-[エージェント]
-  1. 思考: 「まず日程を確認しなきゃ」
-  2. ツール呼び出し: calendar.get_events(next_week)
-  3. 思考: 「7日と8日が出張だな。次は候補地を調べる」
-  4. ツール呼び出し: hotel_search(...)
-  5. 思考: 「3つ候補が出た。ユーザに確認しよう」
-  6. ユーザに質問
-  7. ...
-```
+![h:460](images/agent-loop.svg)
 
 **Tool use を繰り返し回すループ** + **計画立て** = エージェント
 

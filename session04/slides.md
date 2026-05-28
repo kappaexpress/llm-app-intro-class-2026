@@ -54,6 +54,14 @@ Python から OpenAI API を呼んで、返答が返ってくる体験をする
 
 ---
 
+## chat-app の全体像
+
+![h:480](../share-images/overview.svg)
+
+今日は右の **OpenAI API に初接続** する (サーバーもブラウザもまだ無し、Pythonから直接)
+
+---
+
 ## OpenAI API とは
 
 - ChatGPT の中で動いている **モデルそのもの** に、HTTP越しに話しかけるための仕組み
@@ -306,13 +314,7 @@ response = client.chat.completions.create(
 
 ## 比較結果(イメージ)
 
-|              | `reasoning_effort="none"` | `reasoning_effort="high"` |
-| ------------ | ------------------------- | ------------------------- |
-| レイテンシ   | 0.8 秒                    | 6.2 秒                    |
-| 推論トークン | 0                         | 数百〜数千                |
-| 出力トークン | 80                        | 90                        |
-| 合計トークン | ≈ 100                     | ≈ 数千                    |
-| 答えの質     | 怪しい                    | 正解しやすい              |
+![h:430](images/reasoning-effort-comparison.svg)
 
 > **推論トークンも課金対象**。`high` を使う場面は選ぼう
 

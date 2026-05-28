@@ -49,6 +49,14 @@ style: |
 
 ---
 
+## chat-app の全体像
+
+![h:480](../share-images/overview.svg)
+
+今日は ChatGPT Web を触るだけ。第4回以降、この図を自分の手で実装していく
+
+---
+
 ## 第1回で気づいたこと
 
 - 「ときどき間違える」
@@ -125,10 +133,7 @@ style: |
 
 ## 良いプロンプトの4要素
 
-- **役割** — 誰として答えてほしいか
-- **タスク** — 何をしてほしいか
-- **文脈** — どんな前提があるか
-- **出力形式** — どんな形で返してほしいか
+![h:430](images/prompt-elements.svg)
 
 ---
 
@@ -214,19 +219,11 @@ style: |
 
 ---
 
-## system と user のイメージ
+## system / user / assistant のイメージ
 
-```text
-[system]
-あなたは丁寧な日本語で答えるアシスタントです。
-コードは必ず Python で示してください。
+![h:430](images/system-user-roles.svg)
 
-[user]
-リストを逆順にする方法を教えて
-```
-
-- system は会話の最初に1回だけ
-- user は毎回のやり取り
+- system は会話の最初に1回 / user は毎回のユーザー発言 / assistant は過去のAI発言 (履歴)
 
 ---
 

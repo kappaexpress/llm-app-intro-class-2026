@@ -50,6 +50,14 @@ style: |
 
 ---
 
+## chat-app の全体像
+
+![h:480](../share-images/overview.svg)
+
+今日は左(ブラウザ)に **チャット画面** を作り、中央に **会話履歴(メモリ)** を持たせる
+
+---
+
 ## 前回までの状況
 
 - 第5回で `POST /api/chat` の **バックエンド** ができた
@@ -272,19 +280,7 @@ async function sendOnce(text) {
 
 ## どうすれば「覚えている」ように見せるか
 
-答え: **毎回、過去の会話を全部 もう一度送る**
-
-```
-リクエスト2:
-[
-  {role:"user",      content:"私の名前は田中です"},
-  {role:"assistant", content:"よろしく"},
-  {role:"user",      content:"名前は?"}
-]
-→ 「田中さんですね」
-```
-
-「会話の文脈」をリクエストの中に **毎回詰め込む** のがコツ。
+![h:430](images/stateless-multiturn.svg)
 
 ---
 
@@ -585,24 +581,7 @@ __debug.show(); // フロント側の messages を直接覗く
 
 ## 「毎回まるごと送る」の確認
 
-```
-1往復目の Payload:
-{messages: [
-  {role:"user", content:"こんにちは"}
-]}
-
-2往復目の Payload:
-{messages: [
-  {role:"user", content:"こんにちは"},
-  {role:"assistant", content:"こんにちは!"},
-  {role:"user", content:"今日の天気は?"}
-]}
-
-3往復目の Payload:
-{messages: [ ...上の3つ全部..., {role:"user", content:"..."} ]}
-```
-
-→ **目で見て** 「履歴が積み上がっていく」 感覚を持つ
+![h:440](images/messages-growing.svg)
 
 ---
 

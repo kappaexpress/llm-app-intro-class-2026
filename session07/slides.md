@@ -51,6 +51,14 @@ style: |
 
 ---
 
+## chat-app の全体像
+
+![h:480](../share-images/overview.svg)
+
+今日は中央に **SQLite (chat.db)** を足し、履歴をリロードしても消えないようにする
+
+---
+
 ## 第6回の振り返り と 課題
 
 第6回で作ったものはこうだった
@@ -79,23 +87,7 @@ style: |
 
 ## アーキテクチャの変化
 
-第6回 (フロントが履歴を持つ)
-
-```
-[Browser]                    [Server]
- messages配列   --POST全件-->  OpenAI に転送
- (リロードで消滅)              (何も覚えない)
-```
-
-第7回 (サーバが履歴を持つ)
-
-```
-[Browser]                    [Server]
- 直近の表示だけ --POST1件-->   SQLite に保存
-                              ↓
-                              過去全件をDBから取り出して
-                              OpenAI に転送
-```
+![h:440](images/frontend-vs-backend-storage.svg)
 
 ---
 
