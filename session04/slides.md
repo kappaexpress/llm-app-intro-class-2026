@@ -33,28 +33,22 @@ style: |
 
 ## 今日のゴール
 
-**Python から OpenAI API を呼んで、返答が返ってくる体験をする**
-
-- 第1〜3回はずっと「ブラウザ・チャット画面・Web復習」だった
-- 今日から **自分のコードから LLM を呼ぶ** 世界に入る
-- 最後はターミナルで AI と対話できる CLI を作る
+Python から OpenAI API を呼んで、返答が返ってくる体験をする
 
 ---
 
 ## 今日の流れ
 
 **前半**
-
 - OpenAI API とは / 料金の見方
 - 使うモデル: `gpt-5.4-nano`
 - APIキーの配布と **安全な管理**
 - `pip install openai`
 
 **後半**
-
 - 最小スクリプトで1往復してみる
 - `model` / `messages` の意味
-- **Reasoning(考えてから答える)を体感する** — `none` vs `high`
+- **Reasoning（考えてから答える）を体感する** — `none` vs `high`
 - トークンとコストの見方
 - 演習: CLIチャットを書く
 
@@ -416,29 +410,30 @@ while True:
 
 ---
 
-## 今日のおさらい
+## 本日のまとめ
 
-- OpenAI API は HTTP越しにモデルに話しかける仕組み
-- 使ったトークン分だけ課金される(`gpt-5.4-nano` は安いライン)
-- **APIキーはシェルの環境変数で渡す**。コードに書かない・コミットしない
-- `chat.completions.create(model, messages, ...)` で1往復
-- `messages` 配列に履歴を積めばマルチターン
-- `reasoning_effort` で「考える深さ」を選べる(`none`〜`xhigh`)
-- **デフォルトは安い側**、難しい時だけ高くする
-
----
-
-## 次回予告: 第5回「FastAPIでChatバックエンド」
-
-- 今日作った CLI を **HTTP API** に変える
-- `POST /api/chat` を FastAPI で実装
-- **なぜブラウザから直接 OpenAI を呼ばないのか?**
-  - APIキー保護② → バックエンド経由が必須
-
-> いよいよ `chat-app/` 本体の構築開始
+### 学んだこと
+1. **OpenAI API** は HTTP越しにモデルに話しかける仕組み
+2. 使った **トークン分だけ課金** される（`gpt-5.4-nano` は安いライン）
+3. **APIキーはシェルの環境変数** で渡す。コードに書かない・コミットしない
+4. `chat.completions.create(model, messages, ...)` で1往復
+5. `messages` 配列に履歴を積めば **マルチターン**
+6. `reasoning_effort` で「考える深さ」を選べる（`none`〜`xhigh`）
+7. **デフォルトは安い側**、難しい時だけ高くする
 
 ---
 
-# お疲れさまでした!
+### 次回予告
+**第5回: FastAPIでChatバックエンドを作る**
+今日作った CLI を **HTTP API** に変える。`POST /api/chat` を FastAPI で実装し、なぜブラウザから直接 OpenAI を呼ばないのか（APIキー保護）も扱う。いよいよ `chat-app/` 本体の構築開始。
 
-質問・詰まったところがあればチャットへ
+---
+
+## 提出物
+
+実習で作成したファイルをフォームから提出してください:
+
+1. `chat.py` の GitHub のURL
+   - 例: `https://github.com/ユーザー名/リポジトリ名/blob/main/session04/chat.py`
+
+お疲れ様でした！

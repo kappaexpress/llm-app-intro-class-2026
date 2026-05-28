@@ -29,20 +29,26 @@ style: |
 
 **LLMアプリケーション基礎**
 
-FastAPI / fetch / SQLite を思い出す回
-
 ---
 
 ## 今日のゴール
 
-来週からのコーディング再開に向けて、前コースで扱った **Web基礎** を思い出す
+来週からのコーディング再開に向けて、前コースで扱った **Web基礎** (FastAPI / fetch / SQLite) を思い出す
 
-- FastAPI でAPIを書く
-- フロントから fetch でAPIを叩く
-- SQLite でデータを保存する
+---
 
-> **LLM / OpenAI には今日はまだ触りません。**
-> 純粋にWeb基礎の復習に集中する回です。
+## 今日の流れ
+
+**前半**
+- 開発環境の起動確認
+- FastAPI のおさらい（最小Hello / POST + Pydantic）
+- フロントからの fetch / async-await
+
+**後半**
+- SQLite のおさらい（`sqlite3` モジュール）
+- ミニ演習: `/api/echo` を作って fetch で呼ぶ
+
+> **LLM / OpenAI には今日はまだ触りません。** 純粋にWeb基礎の復習に集中する回です。
 
 ---
 
@@ -62,21 +68,6 @@ FastAPI / fetch / SQLite を思い出す回
 
 前コースの TODOアプリと **構造はほぼ同じ**。
 真ん中の処理がCRUDからLLM呼び出しに変わるだけ。
-
----
-
-## 今日の流れ
-
-**前半**
-
-- 開発環境の起動確認
-- FastAPI のおさらい(最小Hello / POST + Pydantic)
-- フロントからの fetch / async-await
-
-**後半**
-
-- SQLite のおさらい(`sqlite3` モジュール)
-- ミニ演習: `/api/echo` を作ってfetchで呼ぶ
 
 ---
 
@@ -545,30 +536,30 @@ Swagger UI: `http://localhost:8000/docs`
 
 ---
 
-## 今日のまとめ
+## 本日のまとめ
 
-- FastAPI = デコレータ + Pydantic で簡単にAPIが書ける
-- フロントは `fetch` + `async/await` でAPIを叩く
-- 表示には **`textContent`**(XSS対策)
-- SQLite は `sqlite3` モジュールで簡単に使える。`?` プレースホルダ必須
-- `chat-app` のバックボーンは全部この上に乗る
+### 学んだこと
+1. **FastAPI** = デコレータ + Pydantic で簡単にAPIが書ける
+2. フロントは **`fetch` + `async/await`** でAPIを叩く
+3. 表示には **`textContent`**（XSS対策）
+4. **SQLite** は `sqlite3` モジュールで簡単に使える / `?` プレースホルダ必須
+5. `chat-app` のバックボーンは全部この上に乗る
 
 > ここまでが「土台」。来週からこの土台に **LLM** を乗せていく。
 
 ---
 
-## 次回予告 — 第4回: OpenAI APIに初めて触れる
+### 次回予告
+**第4回: OpenAI APIに初めて触れる**
+ついに **LLM をコードから呼ぶ** 回。`pip install openai` → `client.chat.completions.create(...)` でターミナルから対話する CLI スクリプト (`python chat.py`) を作る。**APIキーは講師から配布**（受講生個人での取得は不要）。
 
-ついに **LLM をコードから呼ぶ** 回。
+---
 
-- `pip install openai`
-- `from openai import OpenAI`
-- `client.chat.completions.create(model="gpt-5.4-nano", messages=[...])`
-- ターミナルから対話する **CLIスクリプト** (`python chat.py`) を作る
+## 提出物
 
-事前準備:
+実習で作成したファイルをフォームから提出してください:
 
-- **APIキーは講師から配布** します(受講生個人での取得は不要)
-- 配布方法は当日アナウンス。受け取ったキーは **絶対に他人に見せない/送らない/コミットしない**
+1. `session03/exercise/` の echo API が動いている GitHub のURL
+   - 例: `https://github.com/ユーザー名/リポジトリ名/tree/main/session03/exercise`
 
-おつかれさまでした!
+お疲れ様でした！
