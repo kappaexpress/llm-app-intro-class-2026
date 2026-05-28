@@ -13,25 +13,25 @@
 
   <!-- 4 element boxes in 2x2 grid -->
 
-  <!-- ① 役割 -->
+  <!-- ① 目的 -->
   <rect x="60" y="80" width="540" height="170" rx="14" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2.5"/>
   <circle cx="115" cy="120" r="22" fill="#3b82f6"/>
   <text x="115" y="128" text-anchor="middle" fill="#dbeafe" font-size="20" font-weight="bold">①</text>
-  <text x="155" y="128" fill="#dbeafe" font-size="22" font-weight="bold">役割 (Role)</text>
-  <text x="80" y="170" fill="#93c5fd" font-size="15">「誰として」答えてほしいか</text>
+  <text x="155" y="128" fill="#dbeafe" font-size="22" font-weight="bold">目的 (Purpose)</text>
+  <text x="80" y="170" fill="#93c5fd" font-size="15">「何のために / 何が成功か」を伝える</text>
   <rect x="80" y="185" width="500" height="50" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-  <text x="92" y="210" fill="#dbeafe" font-size="14" font-family="monospace">あなたは10年経験のある</text>
-  <text x="92" y="228" fill="#dbeafe" font-size="14" font-family="monospace">Pythonエンジニアです。</text>
+  <text x="92" y="210" fill="#dbeafe" font-size="14" font-family="monospace">SNSで拡散されるコピーが欲しい。</text>
+  <text x="92" y="228" fill="#dbeafe" font-size="14" font-family="monospace">拡散されることが成功です。</text>
 
-  <!-- ② タスク -->
+  <!-- ② 制約 -->
   <rect x="620" y="80" width="540" height="170" rx="14" fill="#155e75" stroke="#06b6d4" stroke-width="2.5"/>
   <circle cx="675" cy="120" r="22" fill="#06b6d4"/>
   <text x="675" y="128" text-anchor="middle" fill="#0f172a" font-size="20" font-weight="bold">②</text>
-  <text x="715" y="128" fill="#cffafe" font-size="22" font-weight="bold">タスク (Task)</text>
-  <text x="640" y="170" fill="#7dd3fc" font-size="15">「何を」してほしいか — 数字・条件を入れる</text>
+  <text x="715" y="128" fill="#cffafe" font-size="22" font-weight="bold">制約 (Constraints)</text>
+  <text x="640" y="170" fill="#7dd3fc" font-size="15">「やらないこと・数量・例外」で範囲を絞る</text>
   <rect x="640" y="185" width="500" height="50" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1"/>
-  <text x="652" y="210" fill="#cffafe" font-size="14" font-family="monospace">キャッチコピーを 3案 考えて。</text>
-  <text x="652" y="228" fill="#cffafe" font-size="14" font-family="monospace">各案 20文字以内 で。</text>
+  <text x="652" y="210" fill="#cffafe" font-size="14" font-family="monospace">3案 / 各20文字以内 /</text>
+  <text x="652" y="228" fill="#cffafe" font-size="14" font-family="monospace">英単語・誇張表現は使わない。</text>
 
   <!-- ③ 文脈 -->
   <rect x="60" y="280" width="540" height="170" rx="14" fill="#78350f" stroke="#f59e0b" stroke-width="2.5"/>
