@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 820" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
   <defs>
     <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
@@ -12,64 +12,105 @@
     </marker>
   </defs>
 
-  <!-- Left container: Browser (Client) - blue (primary) -->
-  <rect x="70" y="50" width="600" height="720" rx="14" ry="14" fill="#1e3a8a" fill-opacity="0.45" stroke="#3b82f6" stroke-width="2.5"/>
-  <text x="370" y="115" text-anchor="middle" fill="#dbeafe" font-size="32" font-weight="bold">ブラウザ（クライアント）</text>
+  <!-- ========== Left container: Browser (Client) — Primary blue ========== -->
+  <rect x="40" y="50" width="420" height="720" rx="14" ry="14" fill="#1e3a8a" fill-opacity="0.45" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="250" y="105" text-anchor="middle" fill="#dbeafe" font-size="30" font-weight="bold">ブラウザ（クライアント）</text>
+  <text x="250" y="135" text-anchor="middle" fill="#93c5fd" font-size="18">第6回でUIを組み立てる</text>
 
   <!-- index.html -->
-  <rect x="120" y="200" width="500" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="370" y="245" text-anchor="middle" fill="#dbeafe" font-size="26" font-weight="bold">index.html</text>
-  <text x="370" y="280" text-anchor="middle" fill="#93c5fd" font-size="20">画面の構造（HTML）</text>
+  <rect x="80" y="180" width="340" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="250" y="220" text-anchor="middle" fill="#dbeafe" font-size="24" font-weight="bold">index.html</text>
+  <text x="250" y="255" text-anchor="middle" fill="#93c5fd" font-size="18">サイドバー / メッセージ欄</text>
 
   <!-- app.js -->
-  <rect x="120" y="370" width="500" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="370" y="415" text-anchor="middle" fill="#dbeafe" font-size="26" font-weight="bold">app.js</text>
-  <text x="370" y="450" text-anchor="middle" fill="#93c5fd" font-size="20">操作・API通信（JS）</text>
+  <rect x="80" y="320" width="340" height="160" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="250" y="360" text-anchor="middle" fill="#dbeafe" font-size="24" font-weight="bold">app.js</text>
+  <text x="250" y="395" text-anchor="middle" fill="#93c5fd" font-size="17">会話の作成 / 切替 / 削除</text>
+  <text x="250" y="420" text-anchor="middle" fill="#93c5fd" font-size="17">メッセージ送信 (fetch)</text>
+  <text x="250" y="445" text-anchor="middle" fill="#93c5fd" font-size="17">履歴の描画</text>
 
   <!-- style.css -->
-  <rect x="120" y="540" width="500" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="370" y="585" text-anchor="middle" fill="#dbeafe" font-size="26" font-weight="bold">style.css</text>
-  <text x="370" y="620" text-anchor="middle" fill="#93c5fd" font-size="20">見た目の装飾（CSS）</text>
+  <rect x="80" y="510" width="340" height="110" rx="10" ry="10" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="250" y="550" text-anchor="middle" fill="#dbeafe" font-size="24" font-weight="bold">style.css</text>
+  <text x="250" y="585" text-anchor="middle" fill="#93c5fd" font-size="18">バブル・サイドバーの見た目</text>
 
-  <!-- Bottom label (left) -->
-  <text x="370" y="730" text-anchor="middle" fill="#cbd5e1" font-size="22">ユーザーのPC上で実行</text>
+  <text x="250" y="725" text-anchor="middle" fill="#cbd5e1" font-size="20">ユーザーのPC（ブラウザ）で実行</text>
 
-  <!-- Right container: Server - cyan (cloud / different category) -->
-  <rect x="740" y="50" width="600" height="720" rx="14" ry="14" fill="#155e75" fill-opacity="0.45" stroke="#06b6d4" stroke-width="2.5"/>
-  <text x="1040" y="115" text-anchor="middle" fill="#cffafe" font-size="32" font-weight="bold">サーバー</text>
+  <!-- ========== Middle container: Server (chat-app) — Cyan ========== -->
+  <rect x="520" y="50" width="460" height="720" rx="14" ry="14" fill="#155e75" fill-opacity="0.45" stroke="#06b6d4" stroke-width="2.5"/>
+  <text x="750" y="105" text-anchor="middle" fill="#cffafe" font-size="30" font-weight="bold">サーバー（chat-app）</text>
+  <text x="750" y="135" text-anchor="middle" fill="#7dd3fc" font-size="18">第5〜8回で段階的に構築</text>
 
-  <!-- 静的ファイル配信 (slate - subdued) -->
-  <rect x="790" y="200" width="500" height="110" rx="10" ry="10" fill="#334155" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="1040" y="245" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="bold">静的ファイル配信</text>
-  <text x="1040" y="280" text-anchor="middle" fill="#cbd5e1" font-size="20">static/ フォルダ</text>
+  <!-- main.py (emerald: active code) -->
+  <rect x="560" y="200" width="380" height="220" rx="10" ry="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="750" y="240" text-anchor="middle" fill="#a7f3d0" font-size="24" font-weight="bold">main.py (FastAPI)</text>
+  <text x="750" y="275" text-anchor="middle" fill="#a7f3d0" font-size="17">/api/conversations</text>
+  <text x="750" y="300" text-anchor="middle" fill="#a7f3d0" font-size="17">/api/conversations/{id}/messages</text>
+  <text x="750" y="335" text-anchor="middle" fill="#6ee7b7" font-size="17">static/ の配信</text>
+  <text x="750" y="360" text-anchor="middle" fill="#6ee7b7" font-size="17">OpenAI API 呼び出し</text>
+  <text x="750" y="395" text-anchor="middle" fill="#6ee7b7" font-size="16">第5回〜</text>
 
-  <!-- main.py (emerald - active code) -->
-  <rect x="790" y="370" width="500" height="110" rx="10" ry="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
-  <text x="1040" y="415" text-anchor="middle" fill="#a7f3d0" font-size="26" font-weight="bold">main.py</text>
-  <text x="1040" y="450" text-anchor="middle" fill="#a7f3d0" font-size="20">FastAPI アプリ本体</text>
+  <!-- chat.db / SQLite (amber: data storage) -->
+  <rect x="560" y="470" width="380" height="200" rx="10" ry="10" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="750" y="510" text-anchor="middle" fill="#fde68a" font-size="24" font-weight="bold">chat.db (SQLite)</text>
+  <text x="750" y="545" text-anchor="middle" fill="#fde68a" font-size="17">conversations テーブル</text>
+  <text x="750" y="570" text-anchor="middle" fill="#fde68a" font-size="17">messages テーブル</text>
+  <text x="750" y="605" text-anchor="middle" fill="#fcd34d" font-size="17">会話履歴を永続化</text>
+  <text x="750" y="635" text-anchor="middle" fill="#fcd34d" font-size="16">第7回〜</text>
 
-  <!-- SQLite (amber - data storage) -->
-  <rect x="790" y="540" width="500" height="110" rx="10" ry="10" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="1040" y="585" text-anchor="middle" fill="#fde68a" font-size="26" font-weight="bold">SQLite</text>
-  <text x="1040" y="620" text-anchor="middle" fill="#fde68a" font-size="20">データベース（.db）</text>
+  <text x="750" y="725" text-anchor="middle" fill="#cbd5e1" font-size="20">Codespaces / 自分のPC で起動</text>
 
-  <!-- Bottom label (right) -->
-  <text x="1040" y="730" text-anchor="middle" fill="#cbd5e1" font-size="22">サーバーマシン上で実行</text>
+  <!-- ========== Right container: OpenAI API — Emerald (response source) ========== -->
+  <rect x="1040" y="50" width="420" height="720" rx="14" ry="14" fill="#064e3b" fill-opacity="0.45" stroke="#10b981" stroke-width="2.5"/>
+  <text x="1250" y="105" text-anchor="middle" fill="#a7f3d0" font-size="30" font-weight="bold">OpenAI API</text>
+  <text x="1250" y="135" text-anchor="middle" fill="#6ee7b7" font-size="18">外部クラウド・第4回で初接続</text>
 
-  <!-- Arrows between containers -->
-  <!-- 初回配信: 静的ファイル配信 -> index.html (slate dashed) -->
-  <line x1="790" y1="255" x2="625" y2="255" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#arrow-slate)"/>
-  <text x="708" y="245" text-anchor="middle" fill="#cbd5e1" font-size="20">初回配信</text>
+  <!-- gpt-5.4-nano -->
+  <rect x="1080" y="180" width="340" height="160" rx="10" ry="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="1250" y="220" text-anchor="middle" fill="#a7f3d0" font-size="24" font-weight="bold">gpt-5.4-nano</text>
+  <text x="1250" y="255" text-anchor="middle" fill="#6ee7b7" font-size="17">GPT-5.4 クラス最安</text>
+  <text x="1250" y="280" text-anchor="middle" fill="#6ee7b7" font-size="17">入力 $0.20 / 出力 $1.25</text>
+  <text x="1250" y="305" text-anchor="middle" fill="#6ee7b7" font-size="17">(per 1M トークン)</text>
 
-  <!-- HTTP リクエスト: app.js -> main.py (blue - primary action) -->
-  <line x1="625" y1="410" x2="785" y2="410" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
-  <text x="705" y="400" text-anchor="middle" fill="#93c5fd" font-size="20">HTTP リクエスト</text>
+  <!-- Chat Completions API -->
+  <rect x="1080" y="370" width="340" height="140" rx="10" ry="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="1250" y="410" text-anchor="middle" fill="#a7f3d0" font-size="22" font-weight="bold">Chat Completions API</text>
+  <text x="1250" y="445" text-anchor="middle" fill="#6ee7b7" font-size="17">model / messages[]</text>
+  <text x="1250" y="475" text-anchor="middle" fill="#6ee7b7" font-size="17">system → user → assistant</text>
 
-  <!-- JSON レスポンス: main.py -> app.js (emerald - response) -->
-  <line x1="785" y1="450" x2="625" y2="450" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
-  <text x="705" y="478" text-anchor="middle" fill="#a7f3d0" font-size="20">JSON レスポンス</text>
+  <!-- Reasoning -->
+  <rect x="1080" y="540" width="340" height="120" rx="10" ry="10" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+  <text x="1250" y="580" text-anchor="middle" fill="#a7f3d0" font-size="22" font-weight="bold">reasoning_effort</text>
+  <text x="1250" y="615" text-anchor="middle" fill="#6ee7b7" font-size="17">none / low / ... / xhigh</text>
+  <text x="1250" y="640" text-anchor="middle" fill="#6ee7b7" font-size="16">第8回で使い分け</text>
 
-  <!-- SQL: main.py -> SQLite (slate) -->
-  <line x1="1040" y1="485" x2="1040" y2="535" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-slate)"/>
-  <text x="1170" y="515" text-anchor="middle" fill="#cbd5e1" font-size="20">SQL</text>
+  <text x="1250" y="725" text-anchor="middle" fill="#cbd5e1" font-size="20">APIキーで認証 (講師から配布)</text>
+
+  <!-- ========== Arrows: Browser ↔ Server ========== -->
+  <!-- HTTP リクエスト (blue): app.js -> main.py -->
+  <line x1="420" y1="370" x2="558" y2="290" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="489" y="320" text-anchor="middle" fill="#93c5fd" font-size="17">HTTP リクエスト</text>
+  <text x="489" y="340" text-anchor="middle" fill="#93c5fd" font-size="14">POST /messages 等</text>
+
+  <!-- JSON レスポンス (emerald): main.py -> app.js -->
+  <line x1="558" y1="395" x2="420" y2="445" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
+  <text x="489" y="420" text-anchor="middle" fill="#a7f3d0" font-size="17">JSON レスポンス</text>
+
+  <!-- ========== Arrows: Server (main.py) ↔ OpenAI ========== -->
+  <!-- API 呼び出し (blue): main.py -> gpt-5.4-nano -->
+  <line x1="940" y1="270" x2="1078" y2="240" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="1009" y="245" text-anchor="middle" fill="#93c5fd" font-size="17">messages[] 送信</text>
+  <text x="1009" y="265" text-anchor="middle" fill="#93c5fd" font-size="14">+ model + reasoning_effort</text>
+
+  <!-- AI 応答 (emerald): gpt-5.4-nano -> main.py -->
+  <line x1="1078" y1="320" x2="940" y2="350" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow-emerald)"/>
+  <text x="1009" y="335" text-anchor="middle" fill="#a7f3d0" font-size="17">AI 応答テキスト</text>
+
+  <!-- ========== Arrows: main.py ↔ SQLite (internal) ========== -->
+  <!-- 保存 ↓ -->
+  <line x1="680" y1="425" x2="680" y2="465" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-slate)"/>
+  <text x="630" y="450" text-anchor="middle" fill="#cbd5e1" font-size="16">保存</text>
+  <!-- 履歴読み出し ↑ -->
+  <line x1="820" y1="465" x2="820" y2="425" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-slate)"/>
+  <text x="880" y="450" text-anchor="middle" fill="#cbd5e1" font-size="16">履歴読み出し</text>
 </svg>
