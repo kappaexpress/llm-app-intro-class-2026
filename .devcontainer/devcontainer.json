@@ -9,7 +9,6 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"anthropic.claude-code",
 				"ms-vscode.live-server",
 				"MS-CEINTL.vscode-language-pack-ja",
 				"GitHub.copilot-chat",
@@ -18,7 +17,7 @@
 			]
 		}
 	},
-	"postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && pip install --break-system-packages -r requirements.txt",
+	"postCreateCommand": "pip install --break-system-packages -r requirements.txt",
 	"forwardPorts": [
 		8000
 	],
