@@ -76,7 +76,7 @@ Python から OpenAI API を呼んで、返答が返ってくる体験をする
 
 OpenAI API は **使った分だけ** 課金される(従量制)
 
-- 単位は **トークン**(文章を細切れにした単位。1トークン ≒ 日本語1〜2文字)
+- 単位は **トークン**(文章を細切れにした単位。日本語1文字 ≒ 1〜2トークン)
 - **入力トークン**(送った分)と **出力トークン**(返ってきた分)で別々に値段が付く
 - モデルが高性能ほど高い
 
@@ -396,6 +396,7 @@ while True:
     response = client.chat.completions.create(
         model="gpt-5.4-nano",
         messages=messages,
+        reasoning_effort="low",  # チャット用途は none〜low で十分
     )
     reply = response.choices[0].message.content
 

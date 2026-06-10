@@ -226,6 +226,7 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 - **CORS** = 別オリジンからのfetchを許可する設定。開発中は `*` でOK
 - **StaticFiles** = `static/index.html` などを直接ブラウザに返せる
+- マウントは **APIルートより後** に書く(先に書くと `/api/...` まで static 扱いになり呼べなくなる)
 
 ---
 

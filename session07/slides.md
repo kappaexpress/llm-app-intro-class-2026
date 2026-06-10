@@ -327,6 +327,8 @@ def send_message(user_message: MessageCreate):
     return {"role": "assistant", "content": assistant_content}
 ```
 
+※ OpenAI 呼び出しの `try/except`(失敗時に 500 を返す)は第5回と同じなので省略。`exercise/main.py` には入っている
+
 ---
 
 ## フロント側の変化 (1)

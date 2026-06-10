@@ -251,7 +251,7 @@ OpenAI API は **失敗することがある**
 - OpenAI 側の障害
 
 何もしないと FastAPI は 500 を返すが、 **詳細は隠れる**
-明示的に `try/except` で `HTTPException(500, detail=...)` に変えると、
+明示的に `try/except` で `HTTPException(status_code=500, detail=...)` に変えると、
 クライアント (フロント) 側でエラー内容を扱いやすくなる
 
 ```python
@@ -294,6 +294,7 @@ from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 ```
 
+- **注意: 必ず API ルートより「後」に書く** — `/` へのマウントはあらゆる URL にマッチするので、先に書くと `/api/chat` が呼べなくなる
 - `/` を開くと `static/index.html` が返る
 - 今日は **プレースホルダ** だけ置いておく
   - 「フロントは第6回で作ります。Swagger UI からテストしてください」と表示

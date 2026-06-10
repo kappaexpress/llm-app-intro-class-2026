@@ -283,7 +283,7 @@ def delete_conversation(conversation_id: int):
     )
     if cursor.fetchone() is None:
         conn.close()
-        raise HTTPException(404, "Conversation not found")
+        raise HTTPException(status_code=404, detail="Conversation not found")
     # 中のメッセージを先に消す
     cursor.execute(
         "DELETE FROM messages WHERE conversation_id = ?",
@@ -314,7 +314,7 @@ def get_messages(conversation_id: int):
         "SELECT id FROM conversations WHERE id = ?", (conversation_id,))
     if cursor.fetchone() is None:
         conn.close()
-        raise HTTPException(404, "Conversation not found")
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
     cursor.execute("""
         SELECT id, role, content, created_at
@@ -325,7 +325,7 @@ def get_messages(conversation_id: int):
     rows = cursor.fetchall()
 
     conn.close()
-    return [dict(r) for r in rows]
+    return [dict(r) for r in rows]  # sqlite3.Row を辞書に変換して返す
 ```
 
 `WHERE conversation_id = ?` で **その会話だけ** に絞り込む
@@ -347,7 +347,7 @@ def send_message(conversation_id: int, user_message: MessageCreate):
     conversation = cursor.fetchone()
     if conversation is None:
         conn.close()
-        raise HTTPException(404, "Conversation not found")
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
     # 2. ユーザメッセージを保存
     cursor.execute(
