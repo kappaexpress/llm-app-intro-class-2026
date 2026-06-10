@@ -195,10 +195,11 @@ ChatGPT などほとんどのチャットUIがこの挙動。
 
 ```js
 async function sendOnce(text) {
+  // 第5回で作った /api/chat をそのまま呼ぶ ({ "message": ... } 形式)
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
+    body: JSON.stringify({ message: text }),
   });
   const data = await res.json();
   return data.reply;
@@ -206,7 +207,7 @@ async function sendOnce(text) {
 ```
 
 - これだけだと **1往復で会話が途切れる**(AIは前の発言を忘れる)
-- → ここから「履歴を持つ」話に進む
+- → ここから「履歴を持つ」話に進む(リクエストの形も後で変える)
 
 ---
 

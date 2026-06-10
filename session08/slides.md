@@ -153,8 +153,8 @@ messages.conversation_id = 999  ← conversations に id=999 が無いとき、
 第7回までの API (1会話前提):
 
 ```
-POST /api/chat              ← メッセージ送信
 GET  /api/messages          ← 全メッセージ取得
+POST /api/messages          ← メッセージ送信
 ```
 
 第8回の API (複数会話対応):
@@ -493,7 +493,15 @@ function renderConversations(conversations) {
     title.textContent = conv.title; // ← textContent で XSS防止
     title.addEventListener("click", () => selectConversation(conv.id));
 
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // タイトル側のクリック(会話を開く)を発火させない
+      deleteConversation(conv.id);
+    });
+
     li.appendChild(title);
+    li.appendChild(deleteBtn);
     list.appendChild(li);
   });
 }

@@ -216,6 +216,23 @@ def get_something():
 
 ---
 
+## リクエストボディの型 (Pydantic)
+
+POST `/api/messages` が受け取るのは **ユーザー発言1件だけ**
+
+```python
+class MessageCreate(BaseModel):
+    """メッセージを送るときのリクエストボディ"""
+
+    # 空文字はNG。長すぎるメッセージも弾く
+    content: str = Field(min_length=1, max_length=4000)
+```
+
+- 第6回の `ChatRequest` (履歴まるごと) は **もう受け取らない** ので削除する
+- `Message` モデルも不要 (履歴はサーバが DB から取り出すため)
+
+---
+
 ## GET `/api/messages` の実装
 
 ```python

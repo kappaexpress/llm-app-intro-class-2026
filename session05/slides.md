@@ -165,13 +165,13 @@ class ChatResponse(BaseModel):
 # エンドポイントの骨格
 
 ```python
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    # 1. OpenAI API を呼ぶ
+    # 1. OpenAI API を呼ぶ (失敗したら HTTPException で 500 を返す)
     # 2. 返答テキストを取り出す
     # 3. ChatResponse に詰めて返す
     ...
