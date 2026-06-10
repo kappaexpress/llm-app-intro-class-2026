@@ -27,7 +27,9 @@ let isSending = false;
  */
 async function loadConversations() {
   try {
+    // fetch() でサーバのAPIを呼び出す。await は「結果が返るまで待つ」の意味
     const response = await fetch("/api/conversations");
+    // response.ok は、ステータスコードが成功(200番台)なら true
     if (!response.ok) {
       showError("会話一覧の取得に失敗しました");
       return;
@@ -45,6 +47,7 @@ async function loadConversations() {
  */
 function renderConversations(conversations) {
   const list = document.getElementById("conversation-list");
+  // いったん空にしてから全件作り直す(いちばん単純な再描画のやり方)
   list.innerHTML = "";
 
   conversations.forEach((conv) => {
@@ -350,13 +353,16 @@ document.getElementById("new-chat-button").addEventListener("click", () => {
 
 // フォーム送信(送信ボタンを押したとき)
 document.getElementById("chat-form").addEventListener("submit", (e) => {
+  // フォーム送信時にページが再読み込みされる(ブラウザの標準動作)のを止める
   e.preventDefault();
   sendMessage();
 });
 
 // テキストエリアで Enterキーで送信、Shift+Enterで改行
 document.getElementById("chat-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
+  // e.isComposing は日本語入力(IME)で変換中なら true。
+  // 変換を確定するためのEnterで送信されてしまわないようにチェックする
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
     sendMessage();
   }

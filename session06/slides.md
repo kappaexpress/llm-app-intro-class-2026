@@ -175,10 +175,12 @@ style: |
 
 - **Enter** で送信
 - **Shift+Enter** で改行
+- 日本語の変換確定の Enter では送信しない (`isComposing`)
 
 ```js
 input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
+  // isComposing = 日本語入力(IME)で変換中かどうか
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
     e.preventDefault(); // 改行をキャンセル
     sendMessage();
   }

@@ -6,7 +6,7 @@
 * {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+  box-sizing: border-box; /* width に padding と border を含める計算方法にする */
 }
 
 body {
@@ -112,8 +112,8 @@ h2 {
   font-size: 15px;
   line-height: 1.6;
   color: #111827;
-  white-space: pre-wrap;
-  word-break: break-word;
+  white-space: pre-wrap; /* メッセージ内の改行をそのまま表示する */
+  word-break: break-word; /* 長い英単語やURLも折り返す */
   min-height: 1.6em;
 }
 

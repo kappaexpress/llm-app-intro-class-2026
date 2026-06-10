@@ -202,7 +202,9 @@ document.getElementById("chat-form").addEventListener("submit", (e) => {
 
 // テキストエリアで Enter で送信、Shift+Enter で改行
 document.getElementById("chat-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
+  // e.isComposing は日本語入力(IME)で変換中なら true。
+  // 変換を確定するためのEnterで送信されてしまわないようにチェックする
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
     sendMessage();
   }

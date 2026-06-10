@@ -116,6 +116,8 @@ def chat(request: ChatRequest) -> ChatResponse:
 # --- 静的ファイル配信 ---
 # フロントエンド(static/index.html, style.css)を / で配信する
 # 第5回時点では中身はプレースホルダ。第6回でチャット画面を実装する
+# 注意: "/" へのマウントはあらゆるURLにマッチするため、
+# 必ずAPIエンドポイントの定義より「後」に書くこと(先に書くとAPIが呼べなくなる)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 

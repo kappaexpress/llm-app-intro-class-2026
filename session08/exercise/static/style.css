@@ -3,10 +3,11 @@
    LLMアプリケーション基礎
    ============================================ */
 
+/* 全要素の余白をリセットする、CSSの定番の書き出し */
 * {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+  box-sizing: border-box; /* width に padding と border を含める計算方法にする */
 }
 
 body {
@@ -53,8 +54,8 @@ body {
 
 .conversation-list {
   list-style: none;
-  flex: 1;
-  overflow-y: auto;
+  flex: 1; /* サイドバーの残りの高さをすべて使う */
+  overflow-y: auto; /* 会話が増えたら縦スクロール */
 }
 
 .conversation-item {
@@ -108,7 +109,7 @@ body {
   display: flex;
   flex-direction: column;
   background-color: white;
-  min-width: 0;
+  min-width: 0; /* 長い内容でも横にはみ出さないようにする(flexの子要素の定番テク) */
 }
 
 .error-message {
@@ -144,12 +145,12 @@ body {
 }
 
 .message.user {
-  align-self: flex-end;
+  align-self: flex-end; /* 自分(ユーザー)のメッセージは右寄せ */
   justify-content: flex-end;
 }
 
 .message.assistant {
-  align-self: flex-start;
+  align-self: flex-start; /* AIのメッセージは左寄せ */
 }
 
 .message-bubble {
@@ -157,8 +158,8 @@ body {
   border-radius: 16px;
   font-size: 15px;
   line-height: 1.6;
-  word-break: break-word;
-  white-space: pre-wrap;
+  word-break: break-word; /* 長い英単語やURLも折り返す */
+  white-space: pre-wrap; /* メッセージ内の改行をそのまま表示する */
 }
 
 .message.user .message-bubble {

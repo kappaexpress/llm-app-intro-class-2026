@@ -108,6 +108,7 @@ def get_messages():
     フロントはページロード時にこれを呼んで履歴を画面に並べる。
     """
     conn = sqlite3.connect(DATABASE)
+    # row_factory を設定すると、結果を row["role"] のように列名で取り出せる
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
@@ -204,6 +205,8 @@ def send_message(user_message: MessageCreate):
 
 # --- 静的ファイル配信 ---
 # フロントエンド (static/index.html, style.css, app.js) を / で配信する
+# 注意: "/" へのマウントはあらゆるURLにマッチするため、
+# 必ずAPIエンドポイントの定義より「後」に書くこと(先に書くとAPIが呼べなくなる)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 

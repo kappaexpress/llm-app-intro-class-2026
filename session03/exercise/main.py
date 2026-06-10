@@ -55,6 +55,8 @@ def echo(req: EchoRequest):
 
 # --- 静的ファイル配信 ---
 # フロントエンド(static/index.html, style.css, app.js)を / で配信する
+# 注意: "/" へのマウントはあらゆるURLにマッチするため、
+# 必ずAPIエンドポイントの定義より「後」に書くこと(先に書くとAPIが呼べなくなる)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 

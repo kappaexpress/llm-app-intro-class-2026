@@ -4,7 +4,7 @@
  */
 
 * {
-  box-sizing: border-box;
+  box-sizing: border-box; /* width に padding と border を含める計算方法にする */
 }
 
 body {

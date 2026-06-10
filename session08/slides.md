@@ -279,7 +279,7 @@ def delete_conversation(conversation_id: int):
 
     # 存在チェック
     cursor.execute(
-        "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+        "SELECT id FROM conversations WHERE id = ?", (conversation_id,)
     )
     if cursor.fetchone() is None:
         conn.close()
@@ -311,7 +311,7 @@ def get_messages(conversation_id: int):
 
     # 会話が存在するかチェック
     cursor.execute(
-        "SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+        "SELECT id FROM conversations WHERE id = ?", (conversation_id,))
     if cursor.fetchone() is None:
         conn.close()
         raise HTTPException(404, "Conversation not found")

@@ -81,6 +81,7 @@ def init_db():
         )
     """)
 
+    # commit() を呼ぶと、ここまでの変更がデータベースファイルに確定保存される
     conn.commit()
     conn.close()
 
@@ -100,6 +101,7 @@ class ConversationCreate(BaseModel):
 class MessageCreate(BaseModel):
     """メッセージを送るときのリクエストボディ"""
 
+    # 1〜4000文字。範囲外ならFastAPIが自動でエラー(422)を返してくれる
     content: str = Field(min_length=1, max_length=4000)
 
 
@@ -110,6 +112,7 @@ class MessageCreate(BaseModel):
 def get_conversations():
     """会話の一覧を取得する(新しい順)"""
     conn = sqlite3.connect(DATABASE)
+    # row_factory を設定すると、結果を row["title"] のように列名で取り出せる
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
@@ -121,12 +124,14 @@ def get_conversations():
     rows = cursor.fetchall()
 
     conn.close()
+    # 各行を辞書に変換したリストを返す(FastAPIが自動でJSONにしてくれる)
     return [
         {"id": row["id"], "title": row["title"], "created_at": row["created_at"]}
         for row in rows
     ]
 
 
+# status_code=201 は「作成に成功した(Created)」を表すHTTPステータスコード
 @app.post("/api/conversations", status_code=201)
 def create_conversation(conversation: ConversationCreate):
     """新しい会話を作成する"""
@@ -139,6 +144,7 @@ def create_conversation(conversation: ConversationCreate):
         (conversation.title, conversation.system_prompt),
     )
     conn.commit()
+    # lastrowid = 直前のINSERTで自動採番されたid
     conversation_id = cursor.lastrowid
 
     conn.close()
@@ -155,10 +161,10 @@ def delete_conversation(conversation_id: int):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # 存在チェック
-    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-    existing = cursor.fetchone()
-    if existing is None:
+    # 存在チェック。HTTPException を raise すると、
+    # FastAPI が 404 (Not Found) のエラーレスポンスを自動で返してくれる
+    cursor.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,))
+    if cursor.fetchone() is None:
         conn.close()
         raise HTTPException(status_code=404, detail="Conversation not found")
 
@@ -183,8 +189,8 @@ def get_messages(conversation_id: int):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # 会話の存在チェック
-    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    # 会話の存在チェック(なければ404エラーを返す)
+    cursor.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,))
     if cursor.fetchone() is None:
         conn.close()
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -272,14 +278,15 @@ def send_message(conversation_id: int, user_message: MessageCreate):
             reasoning_effort=REASONING_EFFORT,
         )
     except Exception as e:
-        # API呼び出し失敗
+        # API呼び出しに失敗した場合(APIキー未設定、ネットワークエラーなど)
+        # ※直前に保存したユーザーのメッセージはDBに残る(シンプルさ優先の作り)
         conn.close()
         raise HTTPException(
             status_code=500,
             detail=f"AI APIの呼び出しに失敗しました: {e}",
         )
 
-    # AIの返答テキストを取り出す
+    # AIの返答テキストを取り出す(choices[0] = 最初の=通常は唯一の返答)
     assistant_content = response.choices[0].message.content
 
     # 5. AIの返答をDBに保存
@@ -302,6 +309,8 @@ def send_message(conversation_id: int, user_message: MessageCreate):
 
 # --- 静的ファイル配信 ---
 # フロントエンド(static/index.html, style.css, app.js)を / で配信する
+# 注意: "/" へのマウントはあらゆるURLにマッチするため、
+# 必ずAPIエンドポイントの定義より「後」に書くこと(先に書くとAPIが呼べなくなる)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
@@ -309,6 +318,8 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 init_db()
 
 
+# `python main.py` で直接実行されたときだけサーバを起動する
+# (`uvicorn main:app` のようにコマンドから起動した場合はここは実行されない)
 if __name__ == "__main__":
     import uvicorn
 
