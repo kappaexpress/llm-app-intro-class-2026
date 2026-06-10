@@ -38,7 +38,7 @@ REASONING_EFFORT = "low"
 SYSTEM_PROMPT = "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"
 
 # --- FastAPIアプリ ---
-app = FastAPI(title="Chat App (Session 6)")
+app = FastAPI(title="Chat App")
 
 # CORS設定(開発しやすいように全許可)
 app.add_middleware(

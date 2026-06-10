@@ -21,6 +21,11 @@ client = OpenAI()
 # 使うモデル名
 MODEL_NAME = "gpt-5.4-nano"
 
+# Reasoning の強さ。"none" / "low" / "medium" / "high" / "xhigh"
+# チャット用途では "none"〜"low" でコストとレイテンシを抑えるのが基本
+# "none" は推論を完全にスキップする最速モード
+REASONING_EFFORT = "low"
+
 # system プロンプト: AI の役割・性格を最初に指示する。
 # このスクリプトでは雑談向けに軽めに設定。
 SYSTEM_PROMPT = "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"
@@ -66,6 +71,7 @@ def main() -> None:
             response = client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
+                reasoning_effort=REASONING_EFFORT,
             )
         except Exception as e:
             # API エラーが起きたら表示してループに戻る。

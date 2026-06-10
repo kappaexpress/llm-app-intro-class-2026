@@ -43,7 +43,7 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 # --- FastAPI アプリ ---
-app = FastAPI(title="Chat App (session07)")
+app = FastAPI(title="Chat App")
 
 # CORS 設定 (開発しやすいように全許可)
 app.add_middleware(

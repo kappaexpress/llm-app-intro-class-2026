@@ -119,9 +119,8 @@ async function sendMessage() {
     });
 
     if (!response.ok) {
-      // エラー時は最後に追加した user メッセージを履歴から戻す
-      // (画面側は残しておく方が状況が見えて親切)
-      const error = await response.json().catch(() => ({}));
+      // ※直前に push した user メッセージは履歴に残る(シンプルさ優先の作り)
+      const error = await response.json();
       loadingElement.remove();
       showError(error.detail || "AIの返答取得に失敗しました");
       return;

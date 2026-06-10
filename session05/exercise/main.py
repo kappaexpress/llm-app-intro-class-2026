@@ -39,7 +39,7 @@ SYSTEM_PROMPT = "あなたは親切で丁寧なアシスタントです。日本
 
 
 # --- FastAPIアプリ ---
-app = FastAPI(title="Chat App (Session 5)")
+app = FastAPI(title="Chat App")
 
 # CORS設定(開発しやすいように全許可)
 # 本番では allow_origins を絞るべきだが、学習用なので全許可
