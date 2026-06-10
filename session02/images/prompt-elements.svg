@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+  </defs>
+
+  <text x="600" y="40" text-anchor="middle" fill="#93c5fd" font-size="24" font-weight="bold">良いプロンプトの4要素</text>
+
+  <!-- 4 element boxes in 2x2 grid -->
+
+  <!-- ① 目的 -->
+  <rect x="60" y="80" width="540" height="170" rx="14" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2.5"/>
+  <circle cx="115" cy="120" r="22" fill="#3b82f6"/>
+  <text x="115" y="128" text-anchor="middle" fill="#dbeafe" font-size="20" font-weight="bold">①</text>
+  <text x="155" y="128" fill="#dbeafe" font-size="22" font-weight="bold">目的 (Purpose)</text>
+  <text x="80" y="170" fill="#93c5fd" font-size="15">「何のために / 何が成功か」を伝える</text>
+  <rect x="80" y="185" width="500" height="50" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+  <text x="92" y="210" fill="#dbeafe" font-size="14" font-family="monospace">SNSで拡散されるコピーが欲しい。</text>
+  <text x="92" y="228" fill="#dbeafe" font-size="14" font-family="monospace">拡散されることが成功です。</text>
+
+  <!-- ② 制約 -->
+  <rect x="620" y="80" width="540" height="170" rx="14" fill="#155e75" stroke="#06b6d4" stroke-width="2.5"/>
+  <circle cx="675" cy="120" r="22" fill="#06b6d4"/>
+  <text x="675" y="128" text-anchor="middle" fill="#0f172a" font-size="20" font-weight="bold">②</text>
+  <text x="715" y="128" fill="#cffafe" font-size="22" font-weight="bold">制約 (Constraints)</text>
+  <text x="640" y="170" fill="#7dd3fc" font-size="15">「やらないこと・数量・例外」で範囲を絞る</text>
+  <rect x="640" y="185" width="500" height="50" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1"/>
+  <text x="652" y="210" fill="#cffafe" font-size="14" font-family="monospace">3案 / 各20文字以内 /</text>
+  <text x="652" y="228" fill="#cffafe" font-size="14" font-family="monospace">英単語・誇張表現は使わない。</text>
+
+  <!-- ③ 文脈 -->
+  <rect x="60" y="280" width="540" height="170" rx="14" fill="#78350f" stroke="#f59e0b" stroke-width="2.5"/>
+  <circle cx="115" cy="320" r="22" fill="#f59e0b"/>
+  <text x="115" y="328" text-anchor="middle" fill="#0f172a" font-size="20" font-weight="bold">③</text>
+  <text x="155" y="328" fill="#fde68a" font-size="22" font-weight="bold">文脈 (Context)</text>
+  <text x="80" y="370" fill="#fcd34d" font-size="15">前提・背景・関連データを渡す (ハルシネーション抑制)</text>
+  <rect x="80" y="385" width="500" height="50" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="92" y="410" fill="#fde68a" font-size="14" font-family="monospace">対象は20代女性向けタピオカ店。</text>
+  <text x="92" y="428" fill="#fde68a" font-size="14" font-family="monospace">店名は「もちぷる」。</text>
+
+  <!-- ④ 出力形式 -->
+  <rect x="620" y="280" width="540" height="170" rx="14" fill="#064e3b" stroke="#10b981" stroke-width="2.5"/>
+  <circle cx="675" cy="320" r="22" fill="#10b981"/>
+  <text x="675" y="328" text-anchor="middle" fill="#0f172a" font-size="20" font-weight="bold">④</text>
+  <text x="715" y="328" fill="#a7f3d0" font-size="22" font-weight="bold">出力形式 (Format)</text>
+  <text x="640" y="370" fill="#6ee7b7" font-size="15">「どんな形」で返してほしいか — 後工程で扱いやすい</text>
+  <rect x="640" y="385" width="500" height="50" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+  <text x="652" y="410" fill="#a7f3d0" font-size="14" font-family="monospace">出力は JSON 配列で。</text>
+  <text x="652" y="428" fill="#a7f3d0" font-size="14" font-family="monospace">各要素は {copy, reason} の2フィールド。</text>
+
+  <!-- Bottom summary -->
+  <rect x="60" y="480" width="1100" height="80" rx="10" fill="#1e3a8a" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="610" y="510" text-anchor="middle" fill="#dbeafe" font-size="17" font-weight="bold">4つ揃うと、結果が安定する。やり直し回数が激減する。</text>
+  <text x="610" y="540" text-anchor="middle" fill="#93c5fd" font-size="15">「いい感じに」「うまく」は禁句 — 数字・固有名詞・条件を必ず書く</text>
+</svg>

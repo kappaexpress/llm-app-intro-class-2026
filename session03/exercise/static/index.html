@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Echo App</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1>Echo App</h1>
+      <p class="hint">
+        入力した文字列をサーバーがそのまま返します。<br />
+        (LLMはまだ使いません。Web基礎の復習です)
+      </p>
+
+      <form id="echo-form" class="input-area">
+        <input
+          type="text"
+          id="message-input"
+          class="message-input"
+          placeholder="メッセージを入力..."
+          maxlength="1000"
+          required
+        />
+        <button type="submit" class="send-button">送信</button>
+      </form>
+
+      <!-- エラーメッセージ表示エリア -->
+      <div id="error-message" class="error-message" style="display: none"></div>
+
+      <!-- 応答表示エリア -->
+      <section class="response-area">
+        <h2>サーバーからの応答</h2>
+        <div id="response" class="response">まだ送信されていません</div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

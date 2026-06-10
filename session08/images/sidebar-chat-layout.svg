@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', sans-serif">
+
+  <text x="600" y="40" text-anchor="middle" fill="#93c5fd" font-size="24" font-weight="bold">2カラム構成: サイドバー + チャットエリア</text>
+
+  <!-- Whole app frame -->
+  <rect x="100" y="80" width="1000" height="420" rx="14" fill="#0f172a" stroke="#94a3b8" stroke-width="2"/>
+
+  <!-- Sidebar (slate) -->
+  <rect x="100" y="80" width="280" height="420" rx="14" fill="#334155" stroke="#94a3b8" stroke-width="2"/>
+  <text x="240" y="120" text-anchor="middle" fill="#cbd5e1" font-size="14" font-weight="bold">.sidebar</text>
+
+  <!-- "+ 新しい会話" button -->
+  <rect x="120" y="135" width="240" height="44" rx="8" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.8"/>
+  <text x="240" y="163" text-anchor="middle" fill="#dbeafe" font-size="16" font-weight="bold">+ 新しい会話</text>
+
+  <!-- conversation list (active first) -->
+  <rect x="120" y="200" width="240" height="40" rx="6" fill="#1e3a8a" stroke="#60a5fa" stroke-width="1.8"/>
+  <text x="135" y="226" fill="#dbeafe" font-size="15">Pythonの質問</text>
+
+  <rect x="120" y="248" width="240" height="36" rx="6" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/>
+  <text x="135" y="272" fill="#cbd5e1" font-size="14">旅行プラン</text>
+
+  <rect x="120" y="292" width="240" height="36" rx="6" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/>
+  <text x="135" y="316" fill="#cbd5e1" font-size="14">雑談</text>
+
+  <rect x="120" y="336" width="240" height="36" rx="6" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/>
+  <text x="135" y="360" fill="#cbd5e1" font-size="14">コード相談</text>
+
+  <text x="240" y="475" text-anchor="middle" fill="#94a3b8" font-size="12">アクティブな会話は青ハイライト</text>
+
+  <!-- Vertical divider between columns -->
+  <line x1="380" y1="80" x2="380" y2="500" stroke="#94a3b8" stroke-width="2"/>
+
+  <!-- Chat area -->
+  <text x="730" y="120" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="bold">.chat-area</text>
+
+  <!-- user bubble (cyan, right) -->
+  <rect x="700" y="150" width="370" height="50" rx="14" fill="#155e75" stroke="#06b6d4" stroke-width="2"/>
+  <text x="720" y="182" fill="#cffafe" font-size="16">Pythonとは?</text>
+  <text x="1075" y="220" text-anchor="end" fill="#7dd3fc" font-size="12">user (右寄せ)</text>
+
+  <!-- AI bubble (blue, left) -->
+  <rect x="410" y="240" width="430" height="80" rx="14" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2"/>
+  <text x="430" y="272" fill="#dbeafe" font-size="16">Pythonは、シンプルで読みやすい</text>
+  <text x="430" y="295" fill="#dbeafe" font-size="16">プログラミング言語です…</text>
+  <text x="410" y="340" fill="#93c5fd" font-size="12">assistant (左寄せ)</text>
+
+  <!-- Input row -->
+  <line x1="395" y1="430" x2="1085" y2="430" stroke="#475569" stroke-width="1.5"/>
+  <rect x="410" y="445" width="560" height="42" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+  <text x="428" y="472" fill="#94a3b8" font-size="14">メッセージを入力...</text>
+  <rect x="985" y="445" width="100" height="42" rx="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="1035" y="472" text-anchor="middle" fill="#dbeafe" font-size="15" font-weight="bold">送信</text>
+
+  <!-- Bottom labels -->
+  <text x="240" y="540" text-anchor="middle" fill="#cbd5e1" font-size="16" font-weight="bold">サイドバー</text>
+  <text x="240" y="560" text-anchor="middle" fill="#94a3b8" font-size="13">固定幅 260px</text>
+
+  <text x="740" y="540" text-anchor="middle" fill="#93c5fd" font-size="16" font-weight="bold">チャットエリア</text>
+  <text x="740" y="560" text-anchor="middle" fill="#cbd5e1" font-size="13">伸縮 (flex: 1)</text>
+</svg>

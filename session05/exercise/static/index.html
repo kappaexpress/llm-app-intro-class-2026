@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat App (Session 5 - Backend Only)</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="placeholder">
+      <h1>Chat App</h1>
+      <p class="badge">Session 5 / バックエンドのみ</p>
+
+      <p>
+        このページは <strong>プレースホルダ</strong> です。
+        フロントエンド(チャット画面)は <strong>第6回</strong> で作ります。
+      </p>
+
+      <p>
+        今は Swagger UI から <code>POST /api/chat</code> をテストしてください:
+      </p>
+
+      <p class="link">
+        <a href="/docs">http://localhost:8000/docs</a>
+      </p>
+
+      <details>
+        <summary>テスト手順</summary>
+        <ol>
+          <li><code>/docs</code> を開く</li>
+          <li><code>POST /api/chat</code> をクリックして展開</li>
+          <li><strong>Try it out</strong> を押す</li>
+          <li>
+            Request body を編集:
+            <pre>{ "message": "こんにちは" }</pre>
+          </li>
+          <li><strong>Execute</strong> を押す</li>
+          <li>下の Response 欄に AI の返答が表示されることを確認</li>
+        </ol>
+      </details>
+    </main>
+  </body>
+</html>
