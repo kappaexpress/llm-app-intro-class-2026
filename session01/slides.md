@@ -137,7 +137,7 @@ LLM = **Large Language Model** (大規模言語モデル)
 - **2023年3月**: GPT-4 (テキスト+画像入力に対応)
 - **2024年5月**: GPT-4o (音声・画像が滑らかに統合)
 - **2025年8月**: GPT-5 系統に世代交代
-- **2026年5月**: ChatGPT は週次9億ユーザー規模、モデルは半年ごとに更新
+- **2026年2月**: ChatGPT が週次9億ユーザーに到達、モデルは数ヶ月ごとに更新
 - このコースは「今のフロンティア」を触りながら学ぶ
 
 ---
@@ -203,11 +203,11 @@ LLM = **Large Language Model** (大規模言語モデル)
 
 # 主要な3つのLLM
 
-| サービス | 提供元    | 2026年5月時点の主なモデル                |
+| サービス | 提供元    | 2026年6月時点の主なモデル                |
 | -------- | --------- | ---------------------------------------- |
 | ChatGPT  | OpenAI    | GPT-5.5 / GPT-5.4 (本コースは nano を採用) |
-| Claude   | Anthropic | Claude Opus 4.7 / Sonnet 4.6 / Haiku 4.5 |
-| Gemini   | Google    | Gemini 3.1 Pro / 3.5 Flash                   |
+| Claude   | Anthropic | Claude Fable 5 / Opus 4.8 / Sonnet 4.6   |
+| Gemini   | Google    | Gemini 3.5 Flash / 3.1 Pro               |
 
 - どれも「テキストを入れたらテキストを返す」点は同じ
 - 細かい強み・スタイル・料金体系が違う
