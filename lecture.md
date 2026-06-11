@@ -26,7 +26,7 @@ LLMの基礎を学びながら、最終的に **複数会話の保存・切り�
 ```
 llm-app-intro-class-2026/
 ├── lecture.md                # 本ファイル
-├── requirements.txt          # fastapi, uvicorn, openai
+├── requirements.txt          # fastapi, uvicorn, openai(バージョン固定)
 ├── .gitignore                # *.db, __pycache__
 ├── .devcontainer/            # postCreateCommand で pip install 済
 ├── knowledgebase/

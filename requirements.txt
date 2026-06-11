@@ -1,3 +1,5 @@
-fastapi
-uvicorn
-openai
+# バージョン固定: いつCodespaceを作っても全員同じ挙動になるようにする
+# (上げるときは chat-app と各 session0X/exercise の動作確認をしてから)
+fastapi==0.136.3
+uvicorn==0.48.0
+openai==2.38.0
