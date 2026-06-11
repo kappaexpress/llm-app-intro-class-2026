@@ -28,7 +28,7 @@ llm-app-intro-class-2026/
 ├── lecture.md                # 本ファイル
 ├── requirements.txt          # fastapi, uvicorn, openai(バージョン固定)
 ├── .gitignore                # *.db, __pycache__
-├── .devcontainer/            # postCreateCommand で pip install 済
+├── .devcontainer/            # onCreateCommand で pip install(Prebuilds 対応)
 ├── knowledgebase/
 │   └── web-app-intro-class-2026/  # 前コース教材（参照用）
 ├── chat-app/                 # 最終完成形（作成済み）
