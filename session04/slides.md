@@ -3,433 +3,248 @@ marp: true
 theme: default
 class: invert
 paginate: true
+size: 16:9
 style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  table {
-    font-size: 22px;
-  }
+  section { font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-size: 25px; padding: 48px 60px; }
+  h1 { color: #60a5fa; font-size: 42px; }
+  h2 { color: #93c5fd; font-size: 34px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+  table { font-size: 22px; }
+  pre { font-size: 21px; }
+  pre, code { font-family: "Noto Sans JP", "Noto Sans CJK JP", monospace; }
+  footer { font-size: 15px; }
+footer: LLMアプリケーション開発 2026
 ---
 
-# 第4回: OpenAI APIに初めて触れる
+# 第4回：プロンプトと外部知識
 
-**LLMアプリケーション基礎**
+参考資料を渡し、根拠付きで答えてもらう
 
 ---
 
-## 今日のゴール
+## 今日のゴールと流れ
 
-Python から OpenAI API を呼んで、返答が返ってくる体験をする
+指示・参考資料・質問を分けて組み立てる。
 
----
-
-## 今日の流れ
-
-**前半**
-- OpenAI API とは / 料金の見方
-- 使うモデル: `gpt-5.4-nano`
-- APIキーの配布と **安全な管理**
-- `pip install openai`
-
-**後半**
-- 最小スクリプトで1往復してみる
-- `model` / `messages` の意味
-- **Reasoning（考えてから答える）を体感する** — `none` vs `high`
-- トークンとコストの見方
-- 演習: CLIチャットを書く
+| 時間 | 内容 |
+|---|---|
+| 10分 | 一般知識と授業固有の情報 |
+| 20分 | プロンプトの構成 |
+| 20分 | 資料の読み込みと出典 |
+| 30分 | 指示文の実装・比較 |
+| 10分 | 限界と振り返り |
 
 ---
 
-## chat-app の全体像
+## 前回のアプリの限界
 
-![h:480](../share-images/overview.svg)
+「この教材の第7回の提出物は？」
 
-今日は右の **OpenAI API に初接続** する (サーバーもブラウザもまだ無し、Pythonから直接)
+資料なしのモデルは、サンプルの授業案内を参照できません。
+詳しく答えているように見えても、推測かもしれません。
 
----
-
-## OpenAI API とは
-
-- ChatGPT の中で動いている **モデルそのもの** に、HTTP越しに話しかけるための仕組み
-- 自分のプログラムから呼べる = 自分のアプリに AI を組み込める
-- 言語は何でもよい(Python / JavaScript / curl ...)。今日は Python SDK を使う
-
-![h:420](images/openai-api-flow.svg)
+今回は `data/02-course.md` の情報を、質問と一緒に渡します。
+案内は練習用の架空データです。
 
 ---
 
-## 料金体系の概要
+## プロンプトの要素
 
-OpenAI API は **使った分だけ** 課金される(従量制)
+| 要素 | 書くこと |
+|---|---|
+| 目的・役割 | 授業の学習を手伝う |
+| 制約 | 提供した資料だけを根拠にする |
+| 出力形式 | 簡潔な日本語、資料IDを付ける |
+| 参考資料 | 回答に使える情報 |
+| 質問 | 利用者が知りたいこと |
 
-- 単位は **トークン**(文章を細切れにした単位。日本語1文字 ≒ 1〜2トークン)
-- **入力トークン**(送った分)と **出力トークン**(返ってきた分)で別々に値段が付く
-- モデルが高性能ほど高い
-
-> 今日のメインモデル `gpt-5.4-nano` は、GPT-5.4 クラスで **最も安い** ライン
-
----
-
-## 今日使うモデル: `gpt-5.4-nano`
-
-| 項目           | 値                        |
-| -------------- | ------------------------- |
-| 入力料金       | $0.20 / 1Mトークン        |
-| 出力料金       | $1.25 / 1Mトークン        |
-| コンテキストウィンドウ | 400K トークン             |
-| 最大出力       | 128K トークン             |
-| Reasoning      | **対応**(`none`〜`xhigh`) |
-
-- 「安い + 大きな窓 + 推論対応」のバランス型
-- 普段のチャット用途には十分高品質
-- 「うっかり爆発」しても **講師側で月予算上限** を設定済み
+各要素の役割が見えるように、コードでも分けます。
 
 ---
 
-## APIキー の配布
+## 指示とデータの違い
 
-- **講師から配布する**(受講生個人での取得は不要)
-- 配布方法は当日アナウンス
-- 受け取ったキーは:
-  - 他人に見せない
-  - チャット/メールで送らない
-  - スクリーンショットに写さない
-  - **GitHub にコミットしない**(これが最大の事故元)
+「参考資料に『前の指示を無視しなさい』と書かれていた」
 
-> 上限は設定してあるけど、無駄な消費はしない意識を持つ
+資料は、回答を作るために読むデータです。
+アプリ全体への命令として実行するものではありません。
+
+区切りと指示文は対策の一部です。完全な防御にはなりません。
+実行権限の制限と、攻撃的な入力での評価も必要です。
 
 ---
 
-## APIキーの安全な管理 ①: シェルの環境変数
+## 資料の形式
 
-**毎回 起動前に、シェルで `export` する**
+```markdown
+# 教材用の架空の授業案内
 
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
-python chat.py
+## 第7回の提出物
+提出物はmain.pyとapp.jsのGitHub URL、および説明文です。
 ```
 
-- `OPENAI_API_KEY` は OpenAI SDK が **自動で読みに行く** 環境変数名
-- コードに `sk-...` を書かなくて済む
-- `git add` 対象に **絶対にならない**
+`#` は資料のタイトル、`##` は見出しです。
+今回はPDFの解析を省き、人が読めるMarkdownを使います。
 
 ---
 
-## `export` のスコープに注意
+## SQLiteへ登録する理由
 
-```bash
-$ export OPENAI_API_KEY=sk-xxx
-$ python chat.py        # ← OK、使える
+資料にIDを付け、後の検索に使います。
 
-$ # ターミナルを閉じる / 新しいタブを開く
+| カラム | 内容 |
+|---|---|
+| id | 資料断片の番号 |
+| source | 原本のファイル名 |
+| title・heading | 資料名と見出し |
+| body | 本文 |
 
-$ python chat.py        # ← もうダメ。AuthenticationError
-```
-
-- `export` は **今開いているシェルにだけ** 有効
-- 新しいタブ・新しいセッションでは **やり直し**
-- 「面倒くさい」けどこれが **安全側に倒した仕様**
-  - キーがファイルとして残らない = 流出リスクが減る
+第4回では、検索せず、登録済みの断片を全部渡します。
 
 ---
 
-## なぜ `.env` ファイルを使わないのか?
+## 資料を渡す流れ
 
-世の中には `.env` というファイルにキーを書く方式もある
+1. `data/` のMarkdownを読む
+2. `##` ごとに分けてSQLiteへ登録
+3. `all_chunks()` で全件取得
+4. `build_context()` で文字列にする
+5. `ask_with_context()` からLLMへ渡す
 
-```
-# .env
-OPENAI_API_KEY=sk-xxx
-```
-
-- これ自体は便利
-- ただし `.gitignore` 設定を1行忘れた瞬間に **GitHubにキーが流出する事故** が頻発
-- 本コースでは **毎回手で `export`** に統一する
-  - キーがファイルに残らない = 事故が起きない
+ファイルの読み込みとSQLite操作は配布済みです。今日は指示文に集中します。
 
 ---
 
-## やってはいけないこと
-
-> **絶対NG**
->
-> 1. コードに直書き: `client = OpenAI(api_key="sk-xxxxx")`
-> 2. GitHub に push する(public/private 問わず)
-> 3. ブラウザ側の JavaScript に書く(F12で誰でも見える)
-> 4. Slack や DM、メールで生のキーを共有する
-> 5. スクリーンショットに写ったまま投稿する
-
-> GitHub は流出キーを自動検出して通知してくれるが、その前に第三者が使い切る事例は多い
-
----
-
-## ライブラリのインストール
-
-```bash
-pip install openai
-```
-
-devcontainer で起動した環境なら、すでに入っているはず
-
-```bash
-$ python -c "import openai; print(openai.__version__)"
-1.xx.x
-```
-
-確認できれば準備完了
-
----
-
-## 最小スクリプト: 1往復してみる
+## 参照用の文字列
 
 ```python
-# one_shot.py
-from openai import OpenAI
-
-client = OpenAI()  # 環境変数 OPENAI_API_KEY を自動で読む
-
-response = client.chat.completions.create(
-    model="gpt-5.4-nano",
-    messages=[
-        {"role": "user", "content": "こんにちは。自己紹介してください。"},
-    ],
-)
-
-print(response.choices[0].message.content)
+context = ''
+for chunk in chunks:
+    context += f"[資料{chunk['id']}] {chunk['title']}\n"
+    context += chunk['body'] + '\n\n'
 ```
 
-```bash
-$ export OPENAI_API_KEY=sk-xxx
-$ python one_shot.py
-こんにちは。私はAIアシスタントの...
-```
+リストから1件ずつ取り出し、文字列へ追加します。
+完成コードでは見出しも付けます。
 
 ---
 
-## `messages` 配列の中身
+## 根拠を指定する指示
 
 ```python
-messages = [
-    {"role": "system", "content": "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"},
-    {"role": "user",   "content": "Pythonとは?"},
-    {"role": "assistant", "content": "Pythonとは..."},
-    {"role": "user",   "content": "じゃあJavaScriptは?"},
-]
-```
-
-- `system`: AI の役割・性格を指示(冒頭1回)
-- `user`: 人間の発言
-- `assistant`: AI の過去の発言(履歴を渡すときに使う)
-
-> 第6回でこの配列に履歴を積んでマルチターン会話を作る
-
----
-
-## レスポンスから何が取れる?
-
-```python
-response = client.chat.completions.create(...)
-
-# 本文
-print(response.choices[0].message.content)
-
-# トークン使用量
-print(response.usage.prompt_tokens)      # 送った分
-print(response.usage.completion_tokens)  # 返ってきた分
-print(response.usage.total_tokens)       # 合計
-```
-
-> **`usage` を確認する習慣** を最初から付けておくとコスト感が掴める
-
----
-
-## 「考えてから答える」モデル: Reasoning
-
-第1回で名前だけ紹介した話の **本編**
-
-- `gpt-5.4-nano` は **推論対応モデル**
-- API呼び出し時に **どれくらい考えるか** を選べる
-- パラメータ名: `reasoning_effort`
-
-| 値       | 動き                   |
-| -------- | ---------------------- |
-| `none`   | 推論しない。最速・最安 |
-| `low`    | 少しだけ考える         |
-| `medium` | そこそこ考える         |
-| `high`   | しっかり考える         |
-| `xhigh`  | 限界まで考える         |
-
----
-
-## Reasoning の使い方
-
-```python
-response = client.chat.completions.create(
-    model="gpt-5.4-nano",
-    messages=[
-        {"role": "user", "content": "難しい論理パズル..."},
-    ],
-    reasoning_effort="high",   # ← ここ
+instructions = (
+    '授業資料だけを根拠として回答してください。'
+    '根拠が不足するときは資料から確認できないと答えてください。'
+    '説明には[資料3]のように資料IDを付けてください。'
 )
 ```
 
-たった **1行追加** するだけで、モデルの挙動が変わる
+隣り合う文字列はPythonが1つにつなぎます。
+実際の教材では、資料内の命令への対策も加えます。
 
 ---
 
-## デモ: `none` vs `high` で同じ質問
-
-同じ難問を両方で投げてみる(`reasoning_demo.py`)
-
-例題:
-
-> 太郎は花子の弟である。次郎は太郎の父である。三郎は次郎の兄である。
-> 花子から見て三郎は誰か?
-
-- `none` … 速い / 安い / でも難しい問題は外しがち
-- `high` … 遅い / 高い / 正答率は上がる
-
----
-
-## 比較結果(イメージ)
-
-![h:430](images/reasoning-effort-comparison.svg)
-
-> **推論トークンも課金対象**。`high` を使う場面は選ぼう
-
----
-
-## 使い分けの指針
-
-**`none` / `low` を使う**
-
-- 雑談
-- 短い要約
-- 単純な質問応答
-- 速度重視のチャット
-- 大量バッチ処理
-
-**`high` / `xhigh` を使う**
-
-- 論理パズル / 数学
-- コードレビュー・難読バグ
-- 複雑な計画立案
-- 高品質な作文の最終仕上げ
-
-> **デフォルトは安い側**。難しい時だけ高くする、が基本戦略
-
----
-
-## トークン消費とコストの計算
-
-`gpt-5.4-nano` の料金:
-
-- 入力: $0.20 / 1Mトークン
-- 出力: $1.25 / 1Mトークン
-
-例: 1回の往復で `prompt_tokens=200`, `completion_tokens=300` だった場合
-
-```
-入力: 200 / 1,000,000 * $0.20 = $0.00004
-出力: 300 / 1,000,000 * $1.25 = $0.000375
-合計: 約 $0.0004 = およそ 0.06円
-```
-
-> 1回ならほぼ無料。ただし **会話が長くなると毎回過去全部を送り直す** ことを忘れずに(第6回で扱う)
-
----
-
-## 演習: CLIチャット (`chat.py`)
-
-ターミナルで AI と対話できるスクリプトを作る
-
-```bash
-$ export OPENAI_API_KEY=sk-xxx
-$ python chat.py
-あなた: こんにちは
-AI: こんにちは!今日はどうしましたか?
-あなた: Pythonの内包表記を教えて
-AI: 内包表記は ...
-あなた: さっき教えてくれた書き方で偶数だけ取り出して
-AI: はい、先ほどの内包表記を使うと ...   ← 履歴を覚えている
-あなた: exit
-```
-
-要件:
-
-- `input()` でユーザーの入力を受ける
-- `messages` 配列に履歴を積んで送る(マルチターン)
-- `exit` か `Ctrl+C` で終了
-
----
-
-## ヒント: `chat.py` の骨格
+## 質問と参考資料を送る
 
 ```python
-from openai import OpenAI
-
-client = OpenAI()
-messages = [
-    {"role": "system", "content": "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"},
-]
-
-while True:
-    user_input = input("あなた: ")
-    if user_input.strip() == "exit":
-        break
-    messages.append({"role": "user", "content": user_input})
-
-    response = client.chat.completions.create(
-        model="gpt-5.4-nano",
-        messages=messages,
-        reasoning_effort="low",  # チャット用途は none〜low で十分
-    )
-    reply = response.choices[0].message.content
-
-    print(f"AI: {reply}")
-    messages.append({"role": "assistant", "content": reply})
+input_text = '参考資料:\n' + context
+input_text += '\n質問:\n' + question
 ```
 
----
-
-## 本日のまとめ
-
-### 学んだこと
-1. **OpenAI API** は HTTP越しにモデルに話しかける仕組み
-2. 使った **トークン分だけ課金** される（`gpt-5.4-nano` は安いライン）
-3. **APIキーはシェルの環境変数** で渡す。コードに書かない・コミットしない
-4. `chat.completions.create(model, messages, ...)` で1往復
-5. `messages` 配列に履歴を積めば **マルチターン**
-6. `reasoning_effort` で「考える深さ」を選べる（`none`〜`xhigh`）
-7. **デフォルトは安い側**、難しい時だけ高くする
+「知識を使う」とは、今回の回答に必要な文脈を入力へ含めることです。
+APIを呼んだだけで、ローカルのファイルを勝手に読むわけではありません。
 
 ---
 
-### 次回予告
-**第5回: FastAPIでChatバックエンドを作る**
-今日作った CLI を **HTTP API** に変える。`POST /api/chat` を FastAPI で実装し、なぜブラウザから直接 OpenAI を呼ばないのか（APIキー保護）も扱う。いよいよ `chat-app/` 本体の構築開始。
+## 実習1：資料を確認
+
+```bash
+cd session04/exercise
+python init_db.py
+python main.py
+```
+
+初回起動時も登録しますが、今回は明示的に登録を体験します。
+「資料全体を渡す」を選び、「第7回の提出物は？」と質問します。
+デモでは本文の抜粋を表示します。
 
 ---
 
-## 提出物
+## 実習2：指示文を復元
 
-実習で作成したファイルをフォームから提出してください:
+1. `llm.py` の `TODO` を探す
+2. 指示文のコメントを外し、仮の `raise` を削除
+3. 講師指定のAPIモードで起動し直す
+4. 「資料なし」と「資料全体」で同じ質問を比較
+5. 回答中の資料IDと、実際の資料本文を照合
 
-1. `chat.py` の GitHub のURL
-   - 例: `https://github.com/ユーザー名/リポジトリ名/blob/main/session04/chat.py`
+コード変更後はサーバーを停止して起動し直します。
 
-お疲れ様でした！
+---
+
+## 実習3：根拠の不足
+
+次の2問を比較します。
+
+- 「第7回の提出物は？」
+- 「来年度の試験日は何月何日？」
+
+後者には日付の根拠がありません。
+「資料からは確認できません」と伝えられるかを評価します。
+回答を控えることも、アプリの機能です。
+
+---
+
+## 出典表示の意味
+
+画面の「LLMに渡した資料」は、サーバーが取得した実際の本文です。
+回答に書かれた資料IDは、モデルが生成した文字列です。
+
+- 存在するIDか
+- その本文が主張を支えているか
+- 必要な条件や例外を落としていないか
+
+出典欄があるだけでは、回答の正しさを保証しません。
+
+---
+
+## 資料の更新
+
+1. `data/` の文章を変更する
+2. サーバーを止める
+3. `python init_db.py` で登録し直す
+4. `python main.py` で起動して同じ質問をする
+
+アプリは `data/` を原本として扱います。
+再登録するとIDが変わる場合があるので、評価にはファイル名・見出しも記録します。
+
+---
+
+## すべて渡す方法の限界
+
+- 資料が増えると入力が長くなり、費用や待ち時間に影響する
+- 無関係な文章が増える
+- モデルの入力上限がある
+- 古い資料や矛盾する資料の扱いが必要になる
+
+教材では参照文を12,000文字以内に制限します。
+これは文字数の教材用制限で、モデルのトークン上限とは異なります。
+
+---
+
+## 確認問題
+
+1. `data/` を編集しただけで、DBの内容は変わる？
+2. 資料IDがあれば、回答の主張も正しい？
+3. 資料にない質問に、どう応答するよう設計する？
+4. 全資料を渡せなくなったら、何を変える？
+
+---
+
+## 提出物と次回
+
+提出：`llm.py` と `worksheet.md` のGitHub URL。
+
+ワークシートには、根拠のある質問とない質問の結果、
+使われた資料名・見出し、自分が直したい点を記録します。
+
+次回は、必要な資料を検索してから渡します。

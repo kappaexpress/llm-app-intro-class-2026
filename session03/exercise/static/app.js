@@ -1,76 +1,89 @@
-// ============================================
-// Echo App - 復習用ミニアプリ
-// LLMアプリケーション基礎 - 第3回
-// ============================================
-//
-// やること:
-//   1. フォーム送信を受け取る
-//   2. fetch で POST /api/echo を呼ぶ
-//   3. レスポンスの echo を画面に表示する
-//
-// 復習ポイント: addEventListener / async-await / fetch / textContent
+// HTMLのidと対応させる。フレームワークは使わない。
+const form = document.getElementById('question-form');
+const button = document.getElementById('send-button');
+const statusText = document.getElementById('status');
 
-const form = document.getElementById("echo-form");
-const input = document.getElementById("message-input");
-const responseEl = document.getElementById("response");
-const errorEl = document.getElementById("error-message");
-const sendButton = form.querySelector(".send-button");
+async function loadConfig() {
+  try {
+    const response = await fetch('/api/config');
+    if (!response.ok) throw new Error('設定の取得に失敗しました。');
+    const data = await response.json();
+    if (data.demo_mode) {
+      document.getElementById('mode-status').textContent = 'デモモード：固定文・資料抜粋・疑似ベクトルを使います。LLMは呼びません。';
+    } else {
+      document.getElementById('mode-status').textContent = 'APIモード：質問と参照資料を外部APIへ送信します。';
+    }
+  } catch (error) {
+    document.getElementById('mode-status').textContent = error.message;
+  }
+}
 
-// 起動直後の表示
-responseEl.classList.add("empty");
+function renderSources(sources) {
+  const list = document.getElementById('sources');
+  list.replaceChildren();
+  for (const source of sources) {
+    const item = document.createElement('li');
+    const title = document.createElement('strong');
+    title.textContent = '[資料' + source.id + '] ' + source.title + ' / ' + source.heading;
+    const body = document.createElement('p');
+    body.textContent = source.body;
+    const filename = document.createElement('small');
+    filename.textContent = '原本: data/' + source.source;
+    if (source.score !== undefined) filename.textContent += ' / 検索スコア: ' + source.score.toFixed(3);
+    item.appendChild(title);
+    item.appendChild(body);
+    item.appendChild(filename);
+    list.appendChild(item);
+  }
+}
 
-// フォーム送信のイベント
-form.addEventListener("submit", async (event) => {
-  // ブラウザのデフォルト送信(ページ遷移)を止める
+async function askQuestion(event) {
   event.preventDefault();
-
-  const message = input.value.trim();
-  if (message === "") {
+  const question = document.getElementById('question').value.trim();
+  if (!question) {
+    statusText.textContent = '質問を入力してください。';
     return;
   }
-
-  // 連打防止 + エラー表示をリセット
-  sendButton.disabled = true;
-  hideError();
-  responseEl.classList.remove("empty");
-  responseEl.textContent = "送信中...";
-
+  button.disabled = true;
+  statusText.textContent = '調べています…';
+  document.getElementById('answer').textContent = '';
+  renderSources([]);
+  document.getElementById('debug').textContent = '';
   try {
-    // バックエンドの /api/echo に POST する
-    const res = await fetch("/api/echo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    });
-
-    if (!res.ok) {
-      // 422 (バリデーションエラー) などはここに来る
-      throw new Error(`サーバーエラー: ${res.status}`);
+    // TODO: POST通信のコメントを外し、throwを削除する
+    // const response = await fetch('/api/ask', {
+    //   method: 'POST',
+    //   headers: {'Content-Type': 'application/json'},
+    //   body: JSON.stringify({
+    //     question: question,
+    //     mode: document.getElementById('mode').value,
+    //     search_text: document.getElementById('search-text').value,
+    //     top_k: Number(document.getElementById('top-k').value)
+    //   })
+    // });
+    throw new Error('TODO: POST通信のコメントを外し、throwを削除する');
+    const data = await response.json();
+    if (!response.ok) {
+      let message = '入力内容を確認してください。';
+      if (typeof data.detail === 'string') message = data.detail;
+      throw new Error(message);
     }
-
-    const data = await res.json();
-
-    // XSS対策で innerHTML ではなく textContent を使う
-    responseEl.textContent = data.echo;
-
-    // 入力欄をクリアして次の入力に備える
-    input.value = "";
-  } catch (err) {
-    showError(err.message ?? "通信に失敗しました");
-    responseEl.classList.add("empty");
-    responseEl.textContent = "応答を取得できませんでした";
+    // LLMの出力も信頼せず、HTMLとして実行しない。
+    document.getElementById('answer').textContent = data.answer;
+    renderSources(data.sources);
+    document.getElementById('debug').textContent = JSON.stringify({
+      context: data.context,
+      tool_results: data.tool_results,
+      input_tokens: data.input_tokens,
+      output_tokens: data.output_tokens
+    }, null, 2);
+    statusText.textContent = '完了 / ' + data.seconds + '秒';
+  } catch (error) {
+    statusText.textContent = error.message;
   } finally {
-    sendButton.disabled = false;
-    input.focus();
+    button.disabled = false;
   }
-});
-
-function showError(message) {
-  errorEl.textContent = message;
-  errorEl.style.display = "block";
 }
 
-function hideError() {
-  errorEl.textContent = "";
-  errorEl.style.display = "none";
-}
+form.addEventListener('submit', askQuestion);
+loadConfig();

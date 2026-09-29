@@ -3,429 +3,239 @@ marp: true
 theme: default
 class: invert
 paginate: true
+size: 16:9
 style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  table {
-    font-size: 22px;
-  }
+  section { font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-size: 25px; padding: 48px 60px; }
+  h1 { color: #60a5fa; font-size: 42px; }
+  h2 { color: #93c5fd; font-size: 34px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+  table { font-size: 22px; }
+  pre { font-size: 21px; }
+  pre, code { font-family: "Noto Sans JP", "Noto Sans CJK JP", monospace; }
+  footer { font-size: 15px; }
+footer: LLMアプリケーション開発 2026
 ---
 
-# 第5回: FastAPIでChatバックエンドを作る
+# 第5回：検索してから回答する
 
-**LLMアプリケーション基礎**
+キーワード検索でRAGの流れを学ぶ
 
 ---
 
-## 今日のゴール
+## 今日のゴールと流れ
 
-OpenAI API を **FastAPI でラップ** して、HTTP 経由で AI に話しかけられる状態を作る
+検索と生成を別の処理として説明する。
 
----
-
-## 今日の流れ
-
-**前半**
-- 前回までのおさらい
-- なぜバックエンド経由にするか（APIキー保護）
-- `POST /api/chat` の設計と Pydantic 型定義
-
-**後半**
-- 実装（OpenAIクライアント / エラーハンドリング / CORS）
-- Swagger UI で動作確認
-- 演習: `/api/chat` を完成させる
+| 時間 | 内容 |
+|---|---|
+| 10分 | 資料全体を渡す方法の限界 |
+| 20分 | RAG、断片、出典の設計 |
+| 20分 | キーワード検索のコード |
+| 30分 | 検索の実装と失敗例の観察 |
+| 10分 | 振り返り・提出 |
 
 ---
 
-## chat-app の全体像
+## RAGとは
 
-![h:480](../share-images/overview.svg)
+Retrieval-Augmented Generation：検索拡張生成。
 
-今日は中央の **main.py (FastAPI)** を立ち上げ、OpenAI 呼び出しを HTTP でラップする
+質問に関係する情報を検索し、その情報を入力に加えて生成します。
+この教材では、登録した資料の中を検索します。
 
----
-
-# 前回までのおさらい
-
-第4回: Python から OpenAI API を直接呼んだ
-
-- ターミナルで `python chat.py` を実行
-- `client.chat.completions.create(...)` で1往復
-- `gpt-5.4-nano` + `reasoning_effort` で挙動を切り替え
-- APIキーは **シェルの環境変数** で渡す (`export OPENAI_API_KEY=sk-...`)
-
-→ **動いた。でもこれは「自分のPC専用」だった**
+RAGはインターネット検索だけを指す言葉ではありません。
+ベクトル検索を使わなくても、検索して生成する構成を作れます。
+<!-- 出典: https://arxiv.org/abs/2005.11401 -->
 
 ---
 
-# 今日やること
+## 準備と質問時の処理
 
-第5回のゴール
+| 準備するとき | 質問を受けたとき |
+|---|---|
+| 資料を集める | 質問と検索語を受け取る |
+| 見出しごとに分割する | 関連する断片を探す |
+| 出典と本文を保存する | 選んだ断片をLLMへ渡す |
+| 内容を点検する | 回答と参照資料を表示する |
 
-- **HTTP のサーバ** にして、外から呼べる形にする
-- `POST /api/chat` というエンドポイントを設計
-- Pydantic でリクエスト/レスポンスの **型** を定義
-- 環境変数からキーを読む
-- API失敗時のエラーハンドリング
-- Swagger UI で動作確認
-- **演習**: 自分の手でバックエンドを完成させる
-
----
-
-# なぜわざわざバックエンド経由にするのか
-
-理由は1つ。 **APIキー保護** です
-
-ブラウザから直接 OpenAI を呼ぶ場合を考えてみる
-
-```javascript
-// !!! 絶対にやってはいけない例 !!!
-fetch("https://api.openai.com/v1/chat/completions", {
-  headers: { "Authorization": "Bearer sk-proj-..." }, // ← キーが丸見え
-  ...
-});
-```
-
-このJSはブラウザに配信される = **誰でも開発者ツールで読める**
+準備は資料更新時、検索と生成は質問ごとに行います。
 
 ---
 
-# APIキーが漏れるとどうなるか
+## チャンク：資料の断片
 
-- 第三者が **あなたのキーで API を叩き放題**
-- 課金は当然あなた持ち
-- 月予算上限を超えて停止 → 自分のアプリも止まる
-- 最悪、巨額の請求 (上限を設定していなかった場合)
+教材では `##` の見出しごとに分けます。
 
-OpenAI は漏洩したキーを **検知して自動で無効化** することもあるが、
-それより前に攻撃が走っている可能性が高い
+- 小さすぎると、主語や条件が失われる
+- 大きすぎると、無関係な内容も一緒に選ばれる
+- 見出し、ファイル名、本文を一緒に保存する
+- 表や手順は、意味が途切れない区切りを考える
 
-→ **キーは絶対にフロント (ブラウザ) に出さない**
-
----
-
-# 解決策: バックエンドを挟む
-
-![h:440](images/api-key-protection.svg)
+1000文字を超える見出しは、教材の読み込み処理がエラーにします。
 
 ---
 
-# `POST /api/chat` の設計
+## 検索語と質問
 
-最小設計から始める
+| 入力欄 | 例 |
+|---|---|
+| 質問 | SQLiteにデータを保存するには？ |
+| 検索語 | SQLite 保存 |
 
-- **メソッド**: `POST` (副作用がある + ボディを送るため)
-- **パス**: `/api/chat`
-- **リクエストボディ**: `{ "message": "こんにちは" }`
-- **レスポンスボディ**: `{ "reply": "こんにちは!何かお手伝いできますか?" }`
-
-ポイント
-
-- 第5回時点では **会話履歴を持たない** (毎回単発の質問応答)
-- マルチターン (履歴を積む) は次回 (第6回) の話
+初学者向けに、日本語の単語分割は人が行います。
+空白で区切った各単語が含まれるかを調べます。
+自然文のまま検索すると、一致しない場合があります。
 
 ---
 
-# Pydantic で型を定義する
+## 検索のスコア
 
-FastAPI は Pydantic と組み合わせて **自動でバリデーション** してくれる
+検索語が「SQLite 保存」の場合：
+
+| 断片の本文 | 一致する単語数 |
+|---|---|
+| SQLiteにデータを保存します | 2 |
+| SQLiteを使います | 1 |
+| CSSで色を指定します | 0 |
+
+同じ単語が何回出ても、この実装では1点です。
+0点は除き、点数の高い順に並べます。
+
+---
+
+## forとifで数える
 
 ```python
-from pydantic import BaseModel
-
-class ChatRequest(BaseModel):
-    message: str
-
-class ChatResponse(BaseModel):
-    reply: str
+score = 0
+for word in words:
+    if word in text:
+        score += 1
 ```
 
-これだけで
-
-- `message` が無い → 自動で 422 エラー
-- `message` が文字列じゃない → 自動で 422 エラー
-- 型情報が Swagger UI に自動で載る
+`words` は空白で分けた検索語のリスト。
+`text` は資料名・見出し・本文をつないだ文字列です。
+`lower()` で英字の大文字小文字の差を小さくします。
 
 ---
 
-# エンドポイントの骨格
+## 上位件数top_k
 
 ```python
-from fastapi import FastAPI, HTTPException
-
-app = FastAPI()
-
-@app.post("/api/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
-    # 1. OpenAI API を呼ぶ (失敗したら HTTPException で 500 を返す)
-    # 2. 返答テキストを取り出す
-    # 3. ChatResponse に詰めて返す
-    ...
+results.sort(key=get_score, reverse=True)
+return results[:top_k]
 ```
 
-- `request: ChatRequest` と書くだけで、FastAPI が JSON をパースして型チェックする
-- `response_model` を指定すると、レスポンスの型も保証される
+`get_score()` は辞書からスコアを取り出す関数です。
+`reverse=True` で大きい順に並べます。
+`[:top_k]` は先頭から指定件数まで取り出す書き方です。
 
 ---
 
-# OpenAI クライアントの初期化
+## 検索結果をLLMへ渡す
 
 ```python
-from openai import OpenAI
-
-# 環境変数 OPENAI_API_KEY を自動で読み取る
-client = OpenAI()
-
-MODEL_NAME = "gpt-5.4-nano"
-REASONING_EFFORT = "low"  # チャット用途は none〜low で十分
+chunks = search_keyword(request.search_text, request.top_k)
+result = ask_with_context(question, chunks)
 ```
 
-**ポイント**
+第4回の `all_chunks()` が、検索関数へ変わりました。
+プロンプトを作る関数と、画面の出典表示はそのまま使います。
 
-- `OpenAI()` は引数を渡さなければ `OPENAI_API_KEY` を勝手に読む
-- だから起動前に必ず `export OPENAI_API_KEY=sk-...` しておく
-- コード内に **キーを直書きしない**
+変更箇所が少ない理由を説明してみましょう。
 
 ---
 
-# system プロンプトは固定で持つ
-
-第5回では「常に親切なアシスタント」になってもらう
-
-```python
-SYSTEM_PROMPT = (
-    "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"
-)
-```
-
-- 第8回で「会話ごとに system プロンプトを変える」話に発展する
-- 今日は **コード内の定数** として持つ
-- system プロンプトの考え方は第2回でやった通り (役割の指示)
-
----
-
-# 中身の実装
-
-```python
-@app.post("/api/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
-    try:
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": request.message},
-            ],
-            reasoning_effort=REASONING_EFFORT,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI APIの呼び出しに失敗: {e}")
-
-    reply = response.choices[0].message.content
-    return ChatResponse(reply=reply)
-```
-
----
-
-# エラーハンドリングの考え方
-
-OpenAI API は **失敗することがある**
-
-- ネットワーク断
-- APIキーが無効・期限切れ
-- レート制限 (429)
-- OpenAI 側の障害
-
-何もしないと FastAPI は 500 を返すが、 **詳細は隠れる**
-明示的に `try/except` で `HTTPException(status_code=500, detail=...)` に変えると、
-クライアント (フロント) 側でエラー内容を扱いやすくなる
-
-```python
-try:
-    response = client.chat.completions.create(...)
-except Exception as e:
-    raise HTTPException(status_code=500, detail=f"AI APIの呼び出しに失敗: {e}")
-```
-
----
-
-# CORS を全許可しておく
-
-開発中はフロントとバックエンドのオリジンが違うことがある
-
-```python
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-
-- 本番では絞るべきだが、今は学習用なので全許可
-- これが無いとブラウザの fetch が CORS エラーで弾かれる
-
----
-
-# 静的ファイル配信もしておく
-
-第6回でフロントを置く場所として `static/` を用意
-
-```python
-from fastapi.staticfiles import StaticFiles
-
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-```
-
-- **注意: 必ず API ルートより「後」に書く** — `/` へのマウントはあらゆる URL にマッチするので、先に書くと `/api/chat` が呼べなくなる
-- `/` を開くと `static/index.html` が返る
-- 今日は **プレースホルダ** だけ置いておく
-  - 「フロントは第6回で作ります。Swagger UI からテストしてください」と表示
-
----
-
-# 起動方法
-
-毎回の流れ
+## 実習1：検索スコアの穴埋め
 
 ```bash
-# 1. APIキーを環境変数にセット (ターミナルを開き直したら毎回必要)
-export OPENAI_API_KEY=sk-...
-
-# 2. 起動
+cd session05/exercise
+python init_db.py
 python main.py
 ```
 
-`main.py` の末尾
-
-```python
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-→ http://localhost:8000 でサーバが立ち上がる
+`knowledge.py` の `TODO` を完成させます。
+コメントを外し、仮の `raise` を削除します。
+検索語「SQLite 保存」、上位件数3で質問します。
 
 ---
 
-# Swagger UI で動作確認
+## 実習2：上位件数の比較
 
-FastAPI は **自動で API ドキュメント** を作ってくれる
+同じ質問と検索語で、上位件数だけを1、3、5に変えます。
 
-http://localhost:8000/docs を開くと…
+- 必要な資料は選ばれたか
+- 無関係な資料が増えたか
+- 根拠が分散した質問に答えられたか
+- APIモードで入力トークンがどう変わったか
 
-![h:460](images/swagger-ui-mock.svg)
-
----
-
-# Swagger UI のテスト手順
-
-1. ブラウザで http://localhost:8000/docs を開く
-2. `POST /api/chat` をクリックして展開
-3. **Try it out** ボタンを押す
-4. Request body を編集: `{ "message": "Pythonって何?" }`
-5. **Execute** を押す
-6. 下の Response 欄に AIの返答が表示される
-
-→ ターミナルにも OpenAI API へのリクエストログが流れるはず
+一度に変える条件は1つにします。
 
 ---
 
-# 設計の確認: フロントにキーは渡らない?
+## 検索が失敗した場合
 
-実装が出来たら **設計を見直す**
+「データが消えない仕組み」を探したいのに、
+資料には「永続化」としか書かれていない場合があります。
 
-チェックポイント
+キーワード検索は、表記の違いや言い換えが苦手なことがあります。
+「SQLite」「保存」などの語を足すとどう変わるでしょうか。
 
-- [ ] `main.py` の中に `sk-` から始まる文字列は無いか?
-- [ ] `static/` の中 (HTML/CSS/JS) に APIキーは無いか?
-- [ ] `git status` でうっかり `.env` 等をコミットしようとしていないか?
-- [ ] ブラウザの開発者ツールの Network タブを開いて、
-      `/api/chat` のリクエストヘッダに APIキーが入っていないか?
-
-ブラウザは **自分のバックエンドだけ** を見ていればOK
+この失敗を、次回の意味検索と比較します。
 
 ---
 
-# 演習
+## 検索と生成の失敗を分ける
 
-`session05/exercise/` をコピーするか、自分の chat-app に追加して
+| 検索結果 | 回答 | 最初に調べる場所 |
+|---|---|---|
+| 必要な根拠がない | 誤答 | 検索語・分割・件数 |
+| 必要な根拠がある | 誤答 | 指示・文脈・モデルの出力 |
+| 根拠がない | 回答を控える | 検索の改善が必要か |
+| 根拠がある | 正答 | 別の質問でも確かめる |
 
-1. `POST /api/chat` を実装する (`ChatRequest` / `ChatResponse`)
-2. `export OPENAI_API_KEY=sk-...` してから `python main.py` で起動
-3. http://localhost:8000/docs を開く
-4. Swagger UI から **3パターンくらい** 質問を投げてみる
-   - 雑談 / 計算問題 / Python の質問など
-5. わざとキーを間違えて起動して、500 エラーが返ることを確認
-
-余力があれば
-
-- `reasoning_effort` を `high` に変えて応答の質・速さの違いを観察
+検索結果を見ずに、プロンプトだけを変え続けないようにします。
 
 ---
 
-# よくあるハマりどころ
+## 実習3：見つからない質問
 
-- **`OPENAI_API_KEY` が無いと言われる**
+検索語を、どの資料にもない `zzzz-no-match` にします。
 
-  - `export` を忘れている / ターミナルを開き直して消えた
-  - `echo $OPENAI_API_KEY` で確認
+教材では検索結果が0件なら、LLMを呼ばずに
+「参照できる資料が見つかりません」と返します。
 
-- **ポート 8000 が使えない**
-
-  - 既に別プロセスが使っている → kill するか別ポート
-
-- **Swagger UI で 422 が返る**
-
-  - リクエストボディの JSON が間違っている可能性
-  - `{ "message": "..." }` の形式を確認
-
-- **500 が返る**
-  - APIキーが無効・期限切れ・残高不足
-  - ターミナルのログにエラー詳細が出ているはず
+0件でない場合にも、答えが含まれるとは限りません。
+その場合の回答保留は、モデルの出力を評価します。
 
 ---
 
-## 本日のまとめ
+## 資料の鮮度と出典
 
-### 学んだこと
-1. ブラウザから OpenAI を **直接呼んではいけない**（APIキーが漏れる）
-2. 解決策: **バックエンドを挟む** → キーはサーバ側にしか存在しない
-3. **FastAPI + Pydantic** で型安全な `POST /api/chat` を実装
-4. 環境変数からキーを読む / `try/except` で 500 を返す
-5. **Swagger UI (`/docs`)** は実装中の動作確認に超便利
-6. まだ会話履歴は持たない（毎回単発） → 次回マルチターン化
+- 原本を編集したらDBを更新する
+- 古い案内と新しい案内を混在させない
+- 複数の資料が矛盾するときの方針を決める
+- 日付が重要な題材では、更新日などのカラムを追加する
 
----
-
-### 次回予告
-**第6回: チャットUI + マルチターン会話**
-ブラウザで動くチャット画面を作る。今日作った `/api/chat` を `fetch` で呼び、`messages` 配列に履歴を積んで AI が「前の発言を覚えている」状態を実現する。トークン と コンテキストウィンドウ の直感もここで扱う。
+教材のIDは再登録で変わる可能性があります。
+評価結果には原本ファイル名・見出しも記録します。
 
 ---
 
-## 提出物
+## 確認問題
 
-実習で作成したファイルをフォームから提出してください:
+1. RAGでは、モデル自体を学習し直している？
+2. 上位5件にすれば、必ず上位1件より正確になる？
+3. 検索結果0件なら、必ずLLMを呼ぶ必要がある？
+4. キーワード検索が見逃しやすい質問は？
 
-1. `session05/exercise/` の `main.py` の GitHub のURL
-   - 例: `https://github.com/ユーザー名/リポジトリ名/blob/main/session05/exercise/main.py`
+---
 
-お疲れ様でした！
+## 提出物と次回
+
+提出：`knowledge.py` と `worksheet.md` のGitHub URL。
+
+- 検索語と上位件数
+- 選ばれた資料のファイル名・見出し・スコア
+- 見つかった例、見つからなかった例
+- 検索と生成のどちらを直すべきか
+
+次回は、文章をベクトルにして検索します。

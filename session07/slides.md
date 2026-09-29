@@ -3,447 +3,292 @@ marp: true
 theme: default
 class: invert
 paginate: true
+size: 16:9
 style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  table {
-    font-size: 22px;
-  }
+  section { font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-size: 25px; padding: 48px 60px; }
+  h1 { color: #60a5fa; font-size: 42px; }
+  h2 { color: #93c5fd; font-size: 34px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+  table { font-size: 22px; }
+  pre { font-size: 21px; }
+  pre, code { font-family: "Noto Sans JP", "Noto Sans CJK JP", monospace; }
+  footer { font-size: 15px; }
+footer: LLMアプリケーション開発 2026
 ---
 
-# 第7回: 履歴の永続化 (SQLite)
+# 第7回：DB・APIを使うLLM
 
-**LLMアプリケーション基礎**
+Function Callingで、決められた関数を呼ぶ
 
 ---
 
-## 今日のゴール
+## 今日のゴールと流れ
 
-会話履歴を **SQLite に保存** して、リロード・再起動しても消えない状態を作る
+LLMの提案と、Pythonによる実行を区別する。
 
----
-
-## 今日の流れ
-
-**前半**
-- なぜ永続化が必要か（フロント保持の限界）
-- スキーマ設計 と `init_db()` でテーブル作成
-- 各関数で `connect` → `close` する書き方
-
-**後半**
-- 保存 / 読み込み / API へ流す処理を実装
-- フロント側の差分（履歴をサーバから取得）
-- 演習: ブラウザリロード・サーバ再起動しても会話が残ることを確認
+| 時間 | 内容 |
+|---|---|
+| 10分 | 文書検索とDB取得の違い |
+| 20分 | 関数定義と引数の形式 |
+| 20分 | 呼び出し結果の受け渡し |
+| 30分 | SQL実装と検証 |
+| 10分 | 制限・振り返り |
 
 ---
 
-## chat-app の全体像
+## 文書検索と構造化データ
 
-![h:480](../share-images/overview.svg)
+| 質問 | 参照先 |
+|---|---|
+| SQLiteとは何か | 学習ノート |
+| 課題を提出する方法 | 案内文書 |
+| 未提出の課題は何件か | 課題DBのstatus |
 
-今日は中央に **SQLite (chat.db)** を足し、履歴をリロードしても消えないようにする
-
----
-
-## 第6回の振り返り と 課題
-
-第6回で作ったものはこうだった
-
-- フロントの JS が `messages` 配列を **メモリ上** に持つ
-- 送信のたびにその配列を丸ごとサーバに POST
-- サーバはステートレス: 受け取った履歴をそのまま OpenAI に転送
-
-**問題**: ブラウザをリロードしたら JS 変数は空に戻る
-→ 会話を続けるには「タブを閉じない」「リロードしない」が条件
-→ 普通のチャットアプリとしてあり得ない
+更新される状態は、DBの条件検索で取得すると扱いやすくなります。
+この教材の課題DBは架空データで、実在の学生の情報ではありません。
 
 ---
 
-## どこに保存すれば消えないか
+## Function Callingとは
 
-| 場所                | 消える?          | 問題点                                        |
-| ------------------- | ---------------- | --------------------------------------------- |
-| JS のメモリ変数     | リロードで消える | これが第6回の状態                             |
-| `localStorage`      | 残る             | そのブラウザにしか残らない / バックアップ困難 |
-| **サーバの SQLite** | **残る**         | 別端末からでも見られる / バックアップしやすい |
+1. アプリが使える関数の名前と引数をLLMに伝える
+2. LLMが関数名と引数を提案する
+3. Pythonが提案を検証して関数を実行する
+4. 実行結果をLLMへ返す
+5. LLMが結果を使って文章を作る
 
-→ 今日は **サーバ側 SQLite** に置く
-
----
-
-## アーキテクチャの変化
-
-![h:440](images/frontend-vs-backend-storage.svg)
+LLMが直接SQLiteを操作するわけではありません。
+<!-- 出典: https://developers.openai.com/api/docs/guides/function-calling -->
 
 ---
 
-## サーバが履歴を持つメリットと道具立て
-
-メリット
-
-- リロード・再起動で消えない / 別端末でも見られる(原理上)
-- フロントは「画面の表示」に集中できる(状態管理がシンプル)
-- 第8回で複数会話に拡張するときの土台になる
-
-道具: **SQLite** (第3回でおさらいした軽量DB)
-
-- ファイル1つ (`chat.db`) で完結。サーバ不要
-- Python 標準ライブラリの `sqlite3` モジュール → 追加インストール不要
-
----
-
-## DB スキーマ設計
-
-今回は **テーブル1つだけ** にする
-
-`messages` テーブル
-
-| カラム       | 型                                | 説明                          |
-| ------------ | --------------------------------- | ----------------------------- |
-| `id`         | INTEGER PRIMARY KEY AUTOINCREMENT | 一意な番号 (自動採番)         |
-| `role`       | TEXT                              | `"user"` または `"assistant"` |
-| `content`    | TEXT                              | 発言の本文                    |
-| `created_at` | TEXT (DEFAULT CURRENT_TIMESTAMP)  | 作成時刻                      |
-
----
-
-## CREATE TABLE 文
-
-```sql
-CREATE TABLE IF NOT EXISTS messages (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    role        TEXT NOT NULL,
-    content     TEXT NOT NULL,
-    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-- `IF NOT EXISTS` で「既にあれば作らない」 (= 起動のたびに安全に呼べる)
-- `created_at` は省略時に **DBが現在時刻を自動で入れてくれる**
-- 第8回で `conversations` テーブルを追加して `conversation_id` を生やす
-
----
-
-## なぜ system プロンプトはDBに入れない?
-
-- 今回は単一会話・固定の振る舞いなので **サーバ側の定数** で十分
-- DB に入れるのは「動的に変えたいもの」だけにする (YAGNI)
-- 第8回で「会話ごとに違う system プロンプト」をやるときに `conversations.system_prompt` カラムを追加する
+## 今回使える関数
 
 ```python
-DEFAULT_SYSTEM_PROMPT = (
-    "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"
+get_assignments(status)
+```
+
+| status | 取得するもの |
+|---|---|
+| all | すべての課題 |
+| pending | 未提出の課題 |
+| done | 提出済みの課題 |
+
+読み取りだけです。削除や提出済みへの変更は許可しません。
+
+---
+
+## 関数の説明を渡す
+
+```python
+{
+    'type': 'function',
+    'name': 'get_assignments',
+    'description': '教材用の架空の課題の提出状況を調べる。',
+    'parameters': {...},
+    'strict': True,
+}
+```
+
+説明文は、LLMが用途を判断する材料です。
+`parameters` に、受け付ける引数の形を記述します。
+
+---
+
+## 引数の形
+
+```python
+'properties': {
+    'status': {
+        'type': 'string',
+        'enum': ['all', 'pending', 'done']
+    }
+},
+'required': ['status'],
+'additionalProperties': False
+```
+
+選択肢と必須項目を指定します。サーバー側でも再度検証します。
+
+---
+
+## 最初のAPI呼び出し
+
+```python
+first = client.responses.create(
+    model=MODEL, reasoning={'effort': 'none'},
+    instructions=instructions,
+    input=history, tools=TOOLS,
+    parallel_tool_calls=False,
+    max_output_tokens=600, store=False,
 )
 ```
 
+関数の情報を `tools` に入れます。まだ関数は実行していません。
+
 ---
 
-## `init_db()`: テーブル作成
+## 関数呼び出しの読み取り
 
 ```python
-import sqlite3
-
-DATABASE = "chat.db"
-
-def init_db():
-    """データベースとテーブルを初期化する"""
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-# アプリ起動時に1回呼ぶ
-init_db()
+for item in first.output:
+    if item.type == 'function_call':
+        rows = execute_tool(item.name, item.arguments)
 ```
+
+出力には文章など、関数以外の項目もあります。
+`arguments` はJSON文字列なので、`json.loads()` で辞書へ変換します。
 
 ---
 
-## 接続は使うたびに connect → close
-
-各 API ハンドラの中で毎回 `sqlite3.connect` して、最後に `close` する
+## 実行前の検証
 
 ```python
-def get_something():
-    conn = sqlite3.connect(DATABASE)
-    # 結果を辞書のように row["role"] で取り出せるようにする
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT ...")
-    rows = cursor.fetchall()
-
-    conn.close()
-    return rows
+if name != 'get_assignments':
+    raise ValueError('許可していない関数です。')
+args = json.loads(arguments)
 ```
 
-- 関数ごとに自分で開いて、自分で閉じる
-- `return` の前に `conn.close()` を書くだけ
-- 「閉じる場所」がコードを読めば一目で分かるのがメリット
+続けて、辞書か、キーが `status` だけか、値が許可した文字列かを調べます。
+モデルが作った値も、外部からの入力として扱います。
 
 ---
 
-## API 設計 (今回はシンプル)
-
-| メソッド | パス            | 役割                                 |
-| -------- | --------------- | ------------------------------------ |
-| GET      | `/api/messages` | 全メッセージを古い順に返す           |
-| POST     | `/api/messages` | ユーザー発言を受け取り、AI返答を返す |
-
-- まだ会話は1つだけなので URL に `conversation_id` は無い
-- 第8回で `/api/conversations/{id}/messages` へ拡張する
-
----
-
-## リクエストボディの型 (Pydantic)
-
-POST `/api/messages` が受け取るのは **ユーザー発言1件だけ**
+## SQLiteの条件検索
 
 ```python
-class MessageCreate(BaseModel):
-    """メッセージを送るときのリクエストボディ"""
-
-    # 空文字はNG。長すぎるメッセージも弾く
-    content: str = Field(min_length=1, max_length=4000)
+cursor.execute(
+    'SELECT id, title, status FROM assignments WHERE status = ?',
+    (status,),
+)
 ```
 
-- 第6回の `ChatRequest` (履歴まるごと) は **もう受け取らない** ので削除する
-- `Message` モデルも不要 (履歴はサーバが DB から取り出すため)
+SQLの形はPython側が決めます。
+`?` に値を別の引数で渡す書き方は、前のWeb授業と同じです。
 
 ---
 
-## GET `/api/messages` の実装
-
-```python
-@app.get("/api/messages")
-def get_messages():
-    """全メッセージを古い順で返す"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT id, role, content, created_at
-        FROM messages
-        ORDER BY id
-    """)
-    rows = cursor.fetchall()
-
-    conn.close()
-    return [
-        {"id": r["id"], "role": r["role"],
-         "content": r["content"], "created_at": r["created_at"]}
-        for r in rows
-    ]
-```
-
----
-
-## POST `/api/messages` の処理の流れ
-
-1. リクエストから user のメッセージ本文を取り出す
-2. **DB に user メッセージを保存** (これで会話履歴の一部になる)
-3. DB から **過去メッセージ全件** を古い順に取り出す
-4. 先頭に system を付けて OpenAI へ送る
-5. AI の返答を **DB に保存**
-6. 返答をフロントへ返す
-
----
-
-## POST `/api/messages` 実装 (1/2)
-
-```python
-@app.post("/api/messages", status_code=201)
-def send_message(user_message: MessageCreate):
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # 1. ユーザーメッセージをDBに保存
-    cursor.execute(
-        "INSERT INTO messages (role, content) VALUES (?, ?)",
-        ("user", user_message.content),
-    )
-    conn.commit()
-
-    # 2. 過去メッセージ全件を古い順に取り出す
-    cursor.execute(
-        "SELECT role, content FROM messages ORDER BY id"
-    )
-    past_rows = cursor.fetchall()
-```
-
----
-
-## POST `/api/messages` 実装 (2/2)
-
-```python
-    # 3. system + 過去全件 を OpenAI 形式に組み立て
-    messages_for_api = [
-        {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
-    ]
-    for row in past_rows:
-        messages_for_api.append(
-            {"role": row["role"], "content": row["content"]}
-        )
-
-    # 4. OpenAI 呼び出し
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=messages_for_api,
-        reasoning_effort=REASONING_EFFORT,
-    )
-    assistant_content = response.choices[0].message.content
-
-    # 5. AI返答をDBに保存
-    cursor.execute(
-        "INSERT INTO messages (role, content) VALUES (?, ?)",
-        ("assistant", assistant_content),
-    )
-    conn.commit()
-
-    conn.close()
-    return {"role": "assistant", "content": assistant_content}
-```
-
-※ OpenAI 呼び出しの `try/except`(失敗時に 500 を返す)は第5回と同じなので省略。`exercise/main.py` には入っている
-
----
-
-## フロント側の変化 (1)
-
-第6回からの差分はとても少ない
-
-- `messages` 配列の保持を **やめる** (サーバが持つ)
-- ページロード時に `GET /api/messages` で過去全件を取得して描画
-- 送信時は `POST /api/messages` を呼んで返ってきた1件を画面に追加するだけ
-
----
-
-## フロント側の変化 (2): ページロード時
-
-```javascript
-// ページが読み込まれたら、まず過去のメッセージを取得して描画
-async function loadMessages() {
-  const response = await fetch("/api/messages");
-  const messages = await response.json();
-  messages.forEach((m) => appendMessage(m.role, m.content));
-}
-
-loadMessages();
-```
-
-- 第6回では「空のメッセージリストから始まる」だったのが
-- 今回は「DBに保存されている履歴から始まる」になる
-- これだけで「リロードしても消えない」が実現する
-
----
-
-## フロント側の変化 (3): 送信時
-
-```javascript
-async function sendMessage() {
-  const content = input.value.trim();
-  appendMessage("user", content); // 自分の発言は即表示
-
-  const res = await fetch("/api/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }), // 履歴を送らない!
-  });
-  const assistant = await res.json();
-  appendMessage("assistant", assistant.content);
-}
-```
-
-- リクエストボディは **今回の1発言だけ**
-- 過去履歴はサーバが DB から自分で取り出す
-
----
-
-## DB の中身を覗いてみる
-
-サーバを動かしながら別ターミナルで:
+## 実習1：SQLの穴埋め
 
 ```bash
-sqlite3 chat.db "SELECT id, role, substr(content,1,40), created_at FROM messages;"
+cd session07/exercise
+python init_db.py
 ```
 
-- `chat.db` は `python main.py` 初回起動時に自動で作られる
-- このファイルを消せば履歴は全部リセットされる
-- `.gitignore` に `*.db` を入れる (履歴をコミットしない)
+`assignment_tools.py` の `get_assignments()` を完成させます。
+`all` の場合と、それ以外の場合のSQLを書き分けます。
+仮の `raise` を削除します。
 
 ---
 
-## ハマりどころ
+## 実習2：関数だけを確認
 
-- **`conn.commit()` を忘れる** → 書き込んだつもりが反映されない
-- **`?` プレースホルダを使わず文字列連結** → SQL インジェクション
-- **`init_db()` を呼び忘れる** → 起動時に `no such table: messages`
-- **`row_factory` を設定し忘れ** → `row["role"]` ではなく `row[0]` を使う羽目になる
+ターミナルで `python` を起動します。
 
----
+```python
+from assignment_tools import get_assignments
+print(get_assignments('pending'))
+print(get_assignments('done'))
+print(get_assignments('all'))
+```
 
-## 演習
-
-`session07/exercise/` をコピーするか、自分の第6回コードを改造して:
-
-1. `messages` テーブルを持つ SQLite を初期化
-2. ブラウザで何往復か会話する
-3. **タブをリロード** → 過去の会話が見えるか確認
-4. **サーバを `Ctrl+C` で止めて再起動** → 過去の会話がまだあるか確認
-5. `sqlite3 chat.db "SELECT * FROM messages;"` で DB の中身を確認
-
-余裕があれば
-
-- `chat.db` を削除して起動 → まっさらから始まることを確認
-- DevTools の Network タブで POST のリクエストボディが「1件だけ」になっていることを確認
+モデルを使う前に、普通のPython関数として正しく動くか確認します。
 
 ---
 
-## 本日のまとめ
+## 結果を次の入力へ追加
 
-### 学んだこと
-1. フロントが履歴を持つ世界から、**サーバが履歴を持つ** 世界へ移行した
-2. `messages` テーブル1つで十分実用になる
-3. `init_db()` と 各関数での connect / close パターンは第8回でもそのまま使う
-4. フロントの責務が減って、UIに集中できるようになった
-5. リロード・サーバ再起動でも会話が残るようになった
+```python
+history.extend(first.output)
+history.append({
+    'type': 'function_call_output',
+    'call_id': item.call_id,
+    'output': json.dumps(rows, ensure_ascii=False),
+})
+```
+
+`call_id` で、どの呼び出しへの結果かを対応させます。
+関数を提案した出力も、次の入力に引き継ぎます。
+<!-- 出典: https://developers.openai.com/api/docs/guides/function-calling -->
 
 ---
 
-### 次回予告
-**第8回: 複数会話の切り替え + 仕上げ**
-`conversations` テーブルを追加し、`messages` に `conversation_id` 外部キーを生やす。サイドバーから会話を切り替え・新規作成・削除できるようにして、ついに **chat-app 完成**。最後に発展テーマ（Tool use / RAG / エージェント）の概念も紹介する。
+## 2回目のAPI呼び出し
+
+関数の結果を含む `history` を渡して、回答を生成します。
+教材では2回目に `tools` を渡しません。
+
+- 追加の関数呼び出しを許可しない
+- 無限に処理を繰り返さない
+- 2回分の入力・出力トークンを合計する
+
+関数を呼ばずに回答する場合の分岐も、コードで確認します。
 
 ---
 
-## 提出物
+## 実習3：自然文から課題を取得
 
-実習で作成したファイルをフォームから提出してください:
+`python main.py` で起動し、「課題DB」を選びます。
+APIモードで、次の質問を試します。
 
-1. `session07/exercise/` の chat-app（SQLite永続化版）の GitHub のURL
-   - 例: `https://github.com/ユーザー名/リポジトリ名/tree/main/session07/exercise`
+- 「未提出の課題を教えて」
+- 「提出済みの課題は？」
+- 「すべての課題を一覧にして」
 
-お疲れ様でした！
+学習用の詳細欄で、関数名・引数・DBの結果を確認します。
+デモは固定でpendingを実行するので、関数選択の評価には使えません。
+
+---
+
+## 実習4：許可しない引数
+
+```python
+from assignment_tools import execute_tool
+execute_tool('delete_all', '{}')
+execute_tool('get_assignments', '{"status":"unknown"}')
+```
+
+どちらも `ValueError` で止まることを確認します。
+「全部削除して」という自然文でも、削除する関数自体がありません。
+
+---
+
+## 権限をコードで制限
+
+- 関数名を固定する
+- 値の選択肢を検証する
+- 読み取りだけのSQLにする
+- `eval()`、`exec()`、モデルが生成したSQLを実行しない
+
+プロンプトに「安全に」と書くだけでなく、
+アプリが実行できる操作そのものを狭めます。
+
+---
+
+## 文書検索との組み合わせ
+
+今回は画面で「資料検索」か「課題DB」かを選びます。
+LLMによる自動的な使い分けは、発展課題です。
+
+制作では、すべての機能を使う必要はありません。
+自分の題材に合う取得方法を選び、その理由を説明します。
+
+---
+
+## 確認問題
+
+1. 関数を実際に実行するのは、LLMとPythonのどちら？
+2. 引数の形式をtoolsで指定したら、Pythonの検証は不要？
+3. `call_id` は何を対応させる？
+4. APIの利用量は1回目だけを数えればよい？
+
+---
+
+## 提出物と次回
+
+提出：`assignment_tools.py` と `worksheet.md` のGitHub URL。
+
+- pending・done・allの取得結果
+- 許可していない関数や引数で止まること
+- 関数選択と実行の役割の説明
+
+次回は、完成したアプリを評価し、安全な運用を点検します。

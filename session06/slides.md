@@ -3,593 +3,258 @@ marp: true
 theme: default
 class: invert
 paginate: true
+size: 16:9
 style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  table {
-    font-size: 22px;
-  }
+  section { font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-size: 25px; padding: 48px 60px; }
+  h1 { color: #60a5fa; font-size: 42px; }
+  h2 { color: #93c5fd; font-size: 34px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+  table { font-size: 22px; }
+  pre { font-size: 21px; }
+  pre, code { font-family: "Noto Sans JP", "Noto Sans CJK JP", monospace; }
+  footer { font-size: 15px; }
+footer: LLMアプリケーション開発 2026
 ---
 
-# 第6回: チャットUI + マルチターン会話
+# 第6回：意味で探す検索
 
-**LLMアプリケーション基礎**
+Embeddingと類似度を理解する
 
 ---
 
-## 今日のゴール
+## 今日のゴールと流れ
 
-ブラウザで動く **チャット画面** を作り、AIが「前の発言を覚えている」状態を実現する
+文章のベクトル化と、検索の比較を体験する。
 
----
-
-## 今日の流れ
-
-**前半**
-- チャットUIの設計（HTML/CSS でメッセージバブル）
-- fetch で1往復してみる
-
-**後半**
-- マルチターン会話 — `messages` 配列に履歴を積む
-- トークン と コンテキストウィンドウ の直感
-- 演習: 1会話・メモリ保持版（リロードで消える）を完成させる
+| 時間 | 内容 |
+|---|---|
+| 10分 | キーワード検索の失敗の復習 |
+| 20分 | Embeddingと類似度 |
+| 20分 | 登録処理と質問時の検索 |
+| 30分 | 計算の穴埋め・検索の比較 |
+| 10分 | 更新・費用・提出 |
 
 ---
 
-## chat-app の全体像
+## 言い方が違う質問
 
-![h:480](../share-images/overview.svg)
+質問：「ページを閉じてもデータが残るのはなぜ？」
+資料：「SQLiteで永続化する」
 
-今日は左(ブラウザ)に **チャット画面** を作り、中央に **会話履歴(メモリ)** を持たせる
+同じ単語がなくても、関連する文章として探したい場面があります。
+Embeddingモデルで文章を数値の列へ変換し、近さを比べます。
 
----
-
-## 前回までの状況
-
-- 第5回で `POST /api/chat` の **バックエンド** ができた
-- でも Swagger UI から1回ずつ叩くだけだった
-- 「会話」というより「1往復ずつのお問い合わせフォーム」
-- 今日: ブラウザに **チャットらしい画面** を載せ、**話の流れ** を持たせる
+必ず見つかるわけではありません。第5回の結果と比較します。
 
 ---
 
-## 完成イメージ(第6回時点)
+## ベクトルとは
 
-![h:460](images/chat-ui-mock.svg)
-
----
-
-## まだ作らないもの(第7回以降)
-
-- サイドバー / 会話の切り替え → 第8回
-- DBに会話を保存 → 第7回
-- リロードしても残る → 第7回
-
-今日は **1つの会話だけ・ブラウザの中だけ** に集中する。
-
----
-
-# 前半: チャットUIを組む
-
----
-
-## チャット画面の3パーツ
-
-1. **メッセージリスト** — 上に積み上がる発言の流れ
-2. **入力欄** — 下にあるテキストエリアと送信ボタン
-3. **メッセージバブル** — 1つ1つの発言の吹き出し
-
-この3つだけ作れば「チャットっぽい画面」になる。
-
----
-
-## 画面のレイアウト(縦に積む)
-
-![h:420](images/flex-layout.svg)
-
-- `display: flex; flex-direction: column;`
-- リスト部分だけが `flex: 1` で伸び縮みする
-
----
-
-## メッセージバブルの構造
-
-```html
-<div class="message user">
-  <div class="message-bubble">こんにちは</div>
-</div>
-
-<div class="message assistant">
-  <div class="message-bubble">こんにちは!</div>
-</div>
-```
-
-- 外側の `.message` で **左右どっち寄せ** かを決める
-- 内側の `.message-bubble` で **色と形** を決める
-
----
-
-## バブルの色分けイメージ
-
-![h:400](images/message-bubbles.svg)
-
-- `align-self: flex-end` で user は右寄せ
-- `align-self: flex-start` で assistant は左寄せ
-
----
-
-## CSS のキモ(抜粋)
-
-```css
-.message.user {
-  align-self: flex-end; /* 右寄せ */
-}
-.message.user .message-bubble {
-  background-color: #2563eb; /* 青 */
-  color: white;
-}
-
-.message.assistant {
-  align-self: flex-start; /* 左寄せ */
-}
-.message.assistant .message-bubble {
-  background-color: #f3f4f6; /* 灰 */
-}
-```
-
----
-
-## 入力欄: textarea + button
-
-```html
-<form id="chat-form" class="input-area">
-  <textarea
-    id="chat-input"
-    rows="2"
-    placeholder="メッセージを入力..."
-  ></textarea>
-  <button type="submit">送信</button>
-</form>
-```
-
-- `<input>` ではなく `<textarea>` を使うのが定番
-- 長文や改行を入れたいことが多いから
-
----
-
-## キー操作のお作法
-
-- **Enter** で送信
-- **Shift+Enter** で改行
-- 日本語の変換確定の Enter では送信しない (`isComposing`)
-
-```js
-input.addEventListener("keydown", (e) => {
-  // isComposing = 日本語入力(IME)で変換中かどうか
-  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-    e.preventDefault(); // 改行をキャンセル
-    sendMessage();
-  }
-});
-```
-
-ChatGPT などほとんどのチャットUIがこの挙動。
-
----
-
-## fetch で1往復(まずは最小形)
-
-```js
-async function sendOnce(text) {
-  // 第5回で作った /api/chat をそのまま呼ぶ ({ "message": ... } 形式)
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text }),
-  });
-  const data = await res.json();
-  return data.reply;
-}
-```
-
-- これだけだと **1往復で会話が途切れる**(AIは前の発言を忘れる)
-- → ここから「履歴を持つ」話に進む(リクエストの形も後で変える)
-
----
-
-# 後半: マルチターン会話
-
----
-
-## マルチターンとは
-
-- **マルチターン (multi-turn) 会話** = 何往復もする会話
-- 「前の発言を踏まえて答えてほしい」
-- 例:
-  - User: 「私の名前は田中です」
-  - AI: 「よろしくお願いします」
-  - User: 「私の名前は何でしたか?」
-  - AI: 「田中さんですね」 ← **これを実現したい**
-
----
-
-## LLM API の重要な性質: ステートレス
-
-- OpenAI の API は **過去のやり取りを記憶しない**
-- 1回のリクエストは、それ単独で完結している
-- サーバは「あなたが誰か」「前に何を話したか」を **覚えていない**
-
-```
-リクエスト1: 「私の名前は田中です」 → 「よろしく」
-リクエスト2: 「名前は?」 → 「???」(何も知らない)
-```
-
----
-
-## どうすれば「覚えている」ように見せるか
-
-![h:430](images/stateless-multiturn.svg)
-
----
-
-## messages 配列の役割
-
-```js
-let messages = [
-  { role: "user",      content: "..." },
-  { role: "assistant", content: "..." },
-  { role: "user",      content: "..." },
-  ...
-];
-```
-
-- フロントが **会話履歴を全部記憶しておく** 変数
-- 発言があるたびに push する
-- 送信時には **これを丸ごとサーバに渡す**
-
----
-
-## 今回の役割分担
-
-![h:440](images/multiturn-sequence.svg)
-
-サーバは **覚えない**。フロントが履歴の置き場。
-
----
-
-## 送信のシーケンス(1往復ぶん)
-
-```
-ユーザーが入力 → 送信ボタン
-   |
-   |  1. messages.push({role:"user", content:入力})
-   |  2. 画面にユーザー発言を表示
-   |  3. 「考え中...」表示
-   |
-   ▼
-fetch("/api/chat", { body: {messages} })
-   |
-   |  サーバ: system + messages を OpenAI に渡す
-   |  サーバ: 返答テキストだけ返す
-   |
-   ▼
-return {reply: "..."}
-   |
-   |  4. messages.push({role:"assistant", content:reply})
-   |  5. 「考え中...」を返答で置き換え
-```
-
----
-
-## コードの本体(抜粋)
-
-```js
-async function sendMessage() {
-  const content = input.value.trim();
-
-  messages.push({ role: "user", content }); // 履歴に追加
-  appendMessage("user", content); // 画面に追加
-  const loading = appendMessage("assistant", "考え中...", "loading");
-
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }), // 履歴を丸ごと送る
-  });
-  const { reply } = await res.json();
-
-  messages.push({ role: "assistant", content: reply });
-  loading.querySelector(".message-bubble").textContent = reply;
-}
-```
-
----
-
-## `/api/chat` のリクエストスキーマが変わる
-
-第5回までの `POST /api/chat` は **単発の質問** を受け取っていた:
-
-```json
-{ "message": "こんにちは" }
-```
-
-第6回からは **会話履歴をまるごと** 受け取る形に変える:
-
-```json
-{
-  "messages": [
-    { "role": "user",      "content": "私の名前は田中です" },
-    { "role": "assistant", "content": "よろしくお願いします" },
-    { "role": "user",      "content": "名前は?" }
-  ]
-}
-```
-
-なぜ変える?: 履歴を毎回送らないとAIは前の発言を覚えてくれないから。
-
----
-
-## Pydantic モデルも書き換える
-
-第5回の `ChatRequest(message: str)` は **捨てて** 、新しい形に置き換える:
+数値を並べたものです。説明用の例：
 
 ```python
-class Message(BaseModel):
-    role: str = Field(pattern="^(user|assistant)$")
-    content: str = Field(min_length=1, max_length=4000)
-
-class ChatRequest(BaseModel):
-    messages: list[Message] = Field(min_length=1)
+a = [1.0, 0.0, 1.0]
+b = [0.9, 0.1, 1.0]
+c = [0.0, 1.0, 0.0]
 ```
 
-- `Message` = 1発言ぶん (`role` + `content`)
-- `ChatRequest` = その配列を1つ持つだけ
-- `role` は `"user"` か `"assistant"` のどちらかに限定
-
-これでフロントから来る JSON をそのまま型チェックできる。
+実際のEmbeddingは、多数の次元を持ちます。
+各数値を「価格」「色」のように直接解釈できるとは限りません。
 
 ---
 
-## サーバ側はびっくりするほどシンプル
+## 生成用と検索用のモデル
+
+| 用途 | モデル | 出力 |
+|---|---|---|
+| 回答を作る | gpt-6-luna | 文章など |
+| 文章をベクトル化 | text-embedding-3-small | 数値の列 |
+
+資料と質問には、同じEmbeddingモデルを使います。
+別モデルの座標同士を、そのまま比較しません。
+<!-- 出典: https://developers.openai.com/api/docs/guides/embeddings -->
+
+---
+
+## 2つのタイミング
+
+| 資料の登録・更新時 | 質問を受けたとき |
+|---|---|
+| 断片を1つずつベクトル化 | 質問をベクトル化 |
+| ベクトルとモデル名を保存 | 保存済みの各ベクトルと比較 |
+| 次の質問で再利用 | 上位の本文を取得して生成へ |
+
+資料のベクトルを毎回作り直す必要はありません。
+
+---
+
+## Embedding API
 
 ```python
-@app.post("/api/chat")
-def chat(req: ChatRequest):
-    # system を先頭に差し込む
-    messages_for_api = [{"role":"system", "content": SYSTEM_PROMPT}]
-    for m in req.messages:
-        messages_for_api.append({"role": m.role, "content": m.content})
-
-    response = client.chat.completions.create(
-        model="gpt-5.4-nano",
-        messages=messages_for_api,
-        reasoning_effort="low",
-    )
-    return {"reply": response.choices[0].message.content}
+response = client.embeddings.create(
+    model=EMBEDDING_MODEL,
+    input=text,
+)
+vector = response.data[0].embedding
 ```
 
-サーバは **履歴を持たない**。覚えてるのはフロントだけ。
+第2回と同じクライアントを使いますが、呼ぶAPIが異なります。
+この呼び出しでも外部へ文章を送信し、利用料金が発生します。
+<!-- 出典: https://developers.openai.com/api/docs/guides/embeddings -->
 
 ---
 
-## なぜ system はサーバ側で差し込む?
+## コサイン類似度
 
-- システムプロンプトはアプリの性格を決める大事な設定
-- フロントから自由に書き換えられたら、AIの振る舞いを乗っ取られる
-- 「絶対に変えてほしくないもの」は **サーバ側で固定** する
-- 第8回で「会話ごとに system を変える」のもサーバ管理
+2つのベクトルの向きの近さを計算します。
 
----
+内積を、それぞれの長さの積で割ります。
 
-## ここで重要な気付き
-
-> 会話が長くなるほど、毎回送るデータも長くなっていく
-
-- 5往復目では「過去5往復ぶん全部」を毎回送っている
-- 50往復目では「過去50往復ぶん全部」を毎回送っている
-- これがLLMアプリの **本質的な特性**
-
-→ 「トークン」と「コンテキストウィンドウ」の話につながる
-
----
-
-# トークンとコンテキストウィンドウ
-
----
-
-## LLM は「文字」を見ていない
-
-- LLM が見ているのは **トークン (token)** という単位
-- 文章をトークンに分解してから処理する
-- 英語: 単語1個 ≒ 1トークン(ざっくり)
-- 日本語: 1文字 ≒ 1〜2トークン(ざっくり)
-- 「次のトークンを予測する」のがLLMの仕事(第1回でやった)
-
----
-
-## トークン分割のイメージ
-
-英語:
-
-```
-"Hello, world!"  →  [Hello] [,] [ world] [!]   = 4トークン
+```text
+内積 = a[0]×b[0] + a[1]×b[1] + …
+長さ = 各成分の2乗の合計の平方根
+類似度 = 内積 ÷ (aの長さ × bの長さ)
 ```
 
-日本語:
+同じ向きは1。ゼロベクトルは教材では0として扱います。
 
+---
+
+## forで内積を計算
+
+```python
+for i in range(len(a)):
+    dot += a[i] * b[i]
+    a_size += a[i] * a[i]
+    b_size += b[i] * b[i]
 ```
-"こんにちは"     →  [こん] [にち] [は]          = 3トークン
-"今日はいい天気" →  [今日] [は] [いい] [天気]    = 4トークン
-```
 
-※ 実際の分割はモデルのトークナイザに依る。あくまでイメージ。
+`i` はリストの位置です。同じ位置の成分同士を掛けます。
+教材では専用の数値計算ライブラリを使わず、処理を追えるようにします。
 
 ---
 
-## なぜトークンが大事?
+## 実習1：計算の穴埋め
 
-LLMの世界では、ほとんどすべてが **トークン基準**で測られる:
+`embeddings.py` の `cosine_similarity()` を完成させます。
+コメントを外し、仮の `raise` を削除します。
 
-| 何         | 単位                                            |
-| ---------- | ----------------------------------------------- |
-| 料金       | 100万トークンあたり $                           |
-| 速度       | 1秒あたり何トークン生成できるか                 |
-| 入力の上限 | コンテキストウィンドウ = 何トークンまで詰めるか |
-| 出力の上限 | 1回の返答で最大何トークン                       |
+ターミナルで `python` を起動して試します。
 
-→ **文字数ではなく、トークン数の感覚を持つ**
-
----
-
-## gpt-5.4-nano のスペック
-
-- 入力: **$0.20 / 1Mトークン**
-- 出力: **$1.25 / 1Mトークン**
-- コンテキストウィンドウ: **400K トークン**
-- 最大出力: **128K トークン**
-
-「コンテキストウィンドウ」= **1回のリクエストに詰め込める最大トークン数**
-
-system + 会話履歴 + 新しい質問 が全部この枠の中に入る必要がある。
-
----
-
-## コンテキストウィンドウのイメージ
-
-![h:460](images/context-window.svg)
-
----
-
-## 会話が長くなると何が起きる?
-
-毎ターン、過去の履歴を **全部** 送り直す設計だから:
-
-- **(a) 送信トークン量が増える** → リクエストごとの料金が上がる
-- **(b) コンテキストウィンドウの上限に近づく** → 上限超えるとエラー
-- **(c) 応答が遅くなる** → 処理する量が増える
-
-短い会話なら気にならないが、長文を貼り続けると一気に消費する。
-
----
-
-## ざっくり感覚を持つ
-
-`gpt-5.4-nano` 入力 $0.20 / 1Mトークン:
-
-| やり取り規模             | 累積入力トークン (目安) | 料金感      |
-| ------------------------ | ----------------------- | ----------- |
-| 5往復 (短文)             | ~500                    | ほぼ0円     |
-| 50往復 (短文)            | ~25,000                 | $0.005      |
-| 1万字の文書を貼って5往復 | ~50,000                 | $0.01       |
-| 400Kウィンドウぎりぎり   | 400,000                 | $0.08 (1回) |
-
-普段は気にしなくていい。でも **「貼り付けは重い」** ことだけは知っておく。
-
----
-
-## DevTools で実際に見てみよう (演習中)
-
-1. F12 で DevTools を開く
-2. **Network タブ** を選ぶ
-3. 何往復か会話する
-4. リストに並ぶ `chat` を1つ目→2つ目→… の順にクリック
-5. **Payload** を見ると `messages` 配列が **毎回長くなっている**
-
-さらに Console で:
-
-```js
-__debug.show(); // フロント側の messages を直接覗く
+```python
+from embeddings import cosine_similarity
+print(cosine_similarity([1, 0], [1, 0]))  # 1
+print(cosine_similarity([1, 0], [0, 1]))  # 0
 ```
 
 ---
 
-## 「毎回まるごと送る」の確認
+## デモ用ベクトルの注意
 
-![h:440](images/messages-growing.svg)
+デモは、指定した単語の出現回数を数値にしています。
 
----
+- 外部のEmbeddingモデルを使わない
+- 意味や言い換えを理解しない
+- ベクトルの保存・比較の流れを観察するために使う
+- 本物の意味検索の品質評価には使わない
 
-# 演習
-
----
-
-## 今日の演習
-
-`session06/exercise/` の chat-app を起動して、次の3つを体験する:
-
-1. **マルチターン会話**: 名前を覚えてくれることを確認
-2. **リロードで消える**: ブラウザを更新すると会話が消える
-3. **Payload観察**: DevTools で `messages` が長くなる様子
-
-`exercise/README.md` の手順に沿って進める。
+デモとAPIモードの結果を混ぜて採点しません。
 
 ---
 
-## 起動手順(おさらい)
+## 実習2：検索の準備
 
 ```bash
-# 1. APIキーを export
-export OPENAI_API_KEY=sk-...
-
-# 2. 依存パッケージ(初回のみ)
-pip install -r requirements.txt
-
-# 3. サーバ起動
 cd session06/exercise
+python init_db.py
+python build_index.py
 python main.py
 ```
 
-ブラウザで `http://localhost:8000` を開く。
+APIモードは `.env` または環境変数を先に設定します。
+`build_index.py` は、APIモードなら各断片を外部へ送ります。
+初回は資料数を確認し、講師の案内に従って実行します。
 
 ---
 
-## 余裕がある人向け: 改造アイデア
+## DBに保存するもの
 
-- system プロンプトを書き換えて性格を変えてみる(関西弁、ツンデレ等)
-- 「リセット」ボタンを追加して `messages = []` に戻す
-- ヘッダーに今のメッセージ数 (`messages.length`) を表示する
-- 入力欄を Markdown 対応にしてみる(`marked.js` 等)
+| 項目 | 保存する理由 |
+|---|---|
+| 本文 | LLMへ渡すのは元の文章 |
+| embedding | 次の検索で再利用する |
+| embedding_model | 質問と同じモデルか確かめる |
+| ファイル名・見出し | 根拠を確認する |
 
-第8回までに必須なのは「マルチターンで動くこと」だけ。
-
----
-
-## 本日のまとめ
-
-### 学んだこと
-1. **チャットUI** = メッセージリスト + 入力欄 + バブル
-2. **LLM API はステートレス** — サーバは過去を覚えない
-3. 「覚えている」ように見せる = **毎回 messages 配列ごと送る**
-4. 会話が長くなる ≒ **送信トークンが増える**
-5. `gpt-5.4-nano` のコンテキストウィンドウは **400K** と広いが無限ではない
+ベクトルだけをLLMへ渡しても、この教材の回答は作れません。
 
 ---
 
-### 次回予告
-**第7回: 履歴の永続化 (SQLite)**
-問題: リロードで会話が消える。解決策はサーバ側で **SQLite** に保存すること。`messages` テーブルを作って発言を保存し、起動時に過去ログを読み込んで画面に復元する。フロントが履歴を持って送るのはやめ、サーバ管理に切り替える。
+## 実習3：同じ質問で比較
+
+APIモードで次の質問を比較します。
+
+1. 「SQLiteに保存するには？」
+2. 「ページを閉じてもデータが残るのはなぜ？」
+3. 「第7回の提出物は？」
+4. 「来年度の試験日は？」
+
+キーワード検索と意味検索で、選ばれた資料を記録します。
+比較する上位件数と資料の版をそろえます。
 
 ---
 
-## 提出物
+## スコアの読み方
 
-実習で作成したファイルをフォームから提出してください:
+類似度は、回答が正しい確率ではありません。
+また、キーワード検索の点数と同じ尺度でもありません。
 
-1. `session06/exercise/` の chat-app（マルチターン版）の GitHub のURL
-   - 例: `https://github.com/ユーザー名/リポジトリ名/tree/main/session06/exercise`
+- 高いスコアでも、質問の答えが含まれない場合がある
+- 固有名詞や記号はキーワード検索が役立つ場合もある
+- 件数やしきい値は、評価用質問で検討する
 
-お疲れ様でした！
+この教材は正のスコアから上位件数を選ぶ単純な実装です。
+
+---
+
+## 資料を更新した場合
+
+```bash
+python init_db.py
+python build_index.py
+```
+
+再登録は、古いベクトルを消します。
+モデルやデモ/APIモードを変えた場合も、再作成が必要です。
+
+本文と古いベクトルの組み合わせで検索しないための仕組みです。
+
+---
+
+## 費用と規模
+
+質問1回の意味検索では、通常、質問のEmbeddingと回答生成を呼びます。
+資料のEmbedding作成にも別に費用がかかります。
+
+この教材は少量の資料をPythonのループで全件比較します。
+大規模な検索基盤の運用は、発展課題とします。
+まずは検索精度と資料の整え方を学びます。
+
+---
+
+## 確認問題
+
+1. 資料と質問に異なるEmbeddingモデルを使ってよい？
+2. 類似度0.8は正答率80%？
+3. 意味検索なら、根拠不足への対処は不要？
+4. 資料を更新した後、何を作り直す？
+
+---
+
+## 提出物と次回
+
+提出：`embeddings.py` と `worksheet.md` のGitHub URL。
+
+2つの検索方式について、成功例と失敗例を1つずつ記録します。
+APIを使えなかった場合は、その旨を明記し、講師の実演を観察します。
+
+次回は、文章の検索に加えて、課題DBの値を取得します。

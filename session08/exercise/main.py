@@ -1,326 +1,106 @@
-"""
-チャットアプリ バックエンド - 完成版
-LLMアプリケーション基礎 - 第8回まで実装した最終形
-
-このバックエンドは次の3つを担当します:
-  1. SQLiteに会話とメッセージを保存する
-  2. OpenAI APIを呼んでAIの返答を取得する
-  3. フロントエンド(static/)を配信する
-"""
-
-import sqlite3
-
+"""授業資料アシスタント。実行: python main.py"""
+import threading
+import time
+from typing import Literal
+import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from openai import OpenAI
 from pydantic import BaseModel, Field
+from openai import APIError, APITimeoutError, RateLimitError
+from settings import BASE_DIR, DATABASE, DEMO_MODE
+from llm import ask_plain, ask_with_context, build_context
+from knowledge import init_documents, all_chunks, search_keyword
+from embeddings import search_vector
+from assignment_tools import init_assignments, ask_assignments
 
-# --- OpenAIクライアントの初期化 ---
-# 環境変数 OPENAI_API_KEY を自動で読み取ってクライアントを作る
-# 起動前にシェルで以下を実行してキーをセットしておくこと:
-#   export OPENAI_API_KEY=sk-...
-# (キーをコードに直接書かないこと。export は現在のシェルにのみ有効)
-client = OpenAI()
+# DBが無い初回だけ資料を登録。更新はサーバーを止めてinit_db.pyを実行する。
+if not DATABASE.exists():
+    init_documents()
+init_assignments()
 
-# 使うモデル名(GPT-5.4 クラスで最も安価。Reasoning 対応)
-MODEL_NAME = "gpt-5.4-nano"
-
-# Reasoning の強さ。"none" / "low" / "medium" / "high" / "xhigh"
-# チャット用途では "none"〜"low" でコストとレイテンシを抑えるのが基本
-# "none" は推論を完全にスキップする最速モード
-REASONING_EFFORT = "low"
-
-# デフォルトのシステムプロンプト(AIの振る舞いを指示する文)
-DEFAULT_SYSTEM_PROMPT = (
-    "あなたは親切で丁寧なアシスタントです。日本語で回答してください。"
-)
-
-# --- FastAPIアプリ ---
-app = FastAPI(title="Chat App")
-
-# CORS設定(開発しやすいように全許可)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- データベース設定 ---
-DATABASE = "chat.db"
+app = FastAPI(title='授業資料アシスタント')
 
 
-def init_db():
-    """データベースとテーブルを初期化する"""
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    # 会話テーブル: 1つのチャット会話を表す
-    # 例: { id: 1, title: "Pythonの質問", system_prompt: "...", created_at: "..." }
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS conversations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            system_prompt TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # メッセージテーブル: 各会話の中の1つの発言
-    # role は "user" か "assistant"
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            conversation_id INTEGER NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (conversation_id) REFERENCES conversations(id)
-        )
-    """)
-
-    # commit() を呼ぶと、ここまでの変更がデータベースファイルに確定保存される
-    conn.commit()
-    conn.close()
+class Question(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    mode: Literal['plain', 'context', 'keyword', 'vector', 'tools'] = 'tools'
+    search_text: str = Field(default='', max_length=100)
+    top_k: int = Field(default=3, ge=1, le=5)
 
 
-# --- Pydanticモデル(リクエストボディの型) ---
+# BEGIN STAGE 8
+# 1プロセスの教材用の上限。全利用者で共有し、再起動するとリセットされる。
+request_times = []
+request_count = 0
+limit_lock = threading.Lock()
 
 
-class ConversationCreate(BaseModel):
-    """新しい会話を作るときのリクエストボディ"""
-
-    # title は省略可能。指定がなければ「新しい会話」になる
-    title: str = Field(default="新しい会話", max_length=100)
-    # system_prompt も省略可能。デフォルトを使う
-    system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, max_length=2000)
-
-
-class MessageCreate(BaseModel):
-    """メッセージを送るときのリクエストボディ"""
-
-    # 1〜4000文字。範囲外ならFastAPIが自動でエラー(422)を返してくれる
-    content: str = Field(min_length=1, max_length=4000)
-
-
-# --- APIエンドポイント: 会話 ---
+def check_limit():
+    global request_count
+    now = time.monotonic()
+    with limit_lock:
+        while request_times and request_times[0] < now - 60:
+            request_times.pop(0)
+        # TODO: 1分10回または合計100回で制限する条件を書き、次のraiseを削除
+        raise HTTPException(status_code=501, detail='TODO: 利用上限の条件を実装してください。')
+        # ヒント: len(request_times) >= 10 or request_count >= 100
+        if False:
+            raise HTTPException(status_code=429, detail='教材用の利用上限に達しました。講師に相談してください。')
+        request_times.append(now)
+        request_count += 1
+# END STAGE 8
 
 
-@app.get("/api/conversations")
-def get_conversations():
-    """会話の一覧を取得する(新しい順)"""
-    conn = sqlite3.connect(DATABASE)
-    # row_factory を設定すると、結果を row["title"] のように列名で取り出せる
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT id, title, created_at
-        FROM conversations
-        ORDER BY id DESC
-    """)
-    rows = cursor.fetchall()
-
-    conn.close()
-    # 各行を辞書に変換したリストを返す(FastAPIが自動でJSONにしてくれる)
-    return [
-        {"id": row["id"], "title": row["title"], "created_at": row["created_at"]}
-        for row in rows
-    ]
+@app.get('/api/config')
+def config():
+    return {'demo_mode': DEMO_MODE}
 
 
-# status_code=201 は「作成に成功した(Created)」を表すHTTPステータスコード
-@app.post("/api/conversations", status_code=201)
-def create_conversation(conversation: ConversationCreate):
-    """新しい会話を作成する"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT INTO conversations (title, system_prompt) VALUES (?, ?)",
-        (conversation.title, conversation.system_prompt),
-    )
-    conn.commit()
-    # lastrowid = 直前のINSERTで自動採番されたid
-    conversation_id = cursor.lastrowid
-
-    conn.close()
-    return {
-        "id": conversation_id,
-        "title": conversation.title,
-    }
-
-
-@app.delete("/api/conversations/{conversation_id}")
-def delete_conversation(conversation_id: int):
-    """会話を削除する(中のメッセージも一緒に削除)"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # 存在チェック。HTTPException を raise すると、
-    # FastAPI が 404 (Not Found) のエラーレスポンスを自動で返してくれる
-    cursor.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,))
-    if cursor.fetchone() is None:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    # この会話に属するメッセージを先に消す
-    cursor.execute(
-        "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
-    )
-    cursor.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
-    conn.commit()
-
-    conn.close()
-    return {"message": "Conversation deleted", "id": conversation_id}
-
-
-# --- APIエンドポイント: メッセージ ---
-
-
-@app.get("/api/conversations/{conversation_id}/messages")
-def get_messages(conversation_id: int):
-    """指定された会話のメッセージ一覧を取得する(古い順)"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # 会話の存在チェック(なければ404エラーを返す)
-    cursor.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,))
-    if cursor.fetchone() is None:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    cursor.execute(
-        """
-        SELECT id, role, content, created_at
-        FROM messages
-        WHERE conversation_id = ?
-        ORDER BY id
-        """,
-        (conversation_id,),
-    )
-    rows = cursor.fetchall()
-
-    conn.close()
-    return [
-        {
-            "id": row["id"],
-            "role": row["role"],
-            "content": row["content"],
-            "created_at": row["created_at"],
-        }
-        for row in rows
-    ]
-
-
-@app.post("/api/conversations/{conversation_id}/messages", status_code=201)
-def send_message(conversation_id: int, user_message: MessageCreate):
-    """
-    ユーザーのメッセージを送り、AIの返答を受け取る
-
-    流れ:
-      1. 会話の存在をチェックし、systemプロンプトを取得
-      2. ユーザーのメッセージをDBに保存
-      3. この会話の過去メッセージ全部 + system を OpenAI API に送る
-      4. AIの返答をDBに保存
-      5. AIの返答を返す
-    """
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # 1. 会話の存在チェック + system_prompt を取り出す
-    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-    conversation = cursor.fetchone()
-    if conversation is None:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    # 2. ユーザーメッセージをDBに保存
-    cursor.execute(
-        "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-        (conversation_id, "user", user_message.content),
-    )
-    conn.commit()
-
-    # 3. この会話の過去メッセージを全部取り出す(今追加したユーザーメッセージも含む)
-    cursor.execute(
-        """
-        SELECT role, content
-        FROM messages
-        WHERE conversation_id = ?
-        ORDER BY id
-        """,
-        (conversation_id,),
-    )
-    past_rows = cursor.fetchall()
-
-    # OpenAI API に渡す形式:
-    # [{"role": "system", "content": "..."},
-    #  {"role": "user", "content": "..."},
-    #  {"role": "assistant", "content": "..."}, ...]
-    messages_for_api = [
-        {"role": "system", "content": conversation["system_prompt"]},
-    ]
-    for row in past_rows:
-        messages_for_api.append({"role": row["role"], "content": row["content"]})
-
-    # 4. OpenAI API を呼び出す
+@app.post('/api/ask')
+def ask(request: Question):
+    question = request.question.strip()
+    if not question:
+        raise HTTPException(status_code=422, detail='質問を入力してください。')
+    check_limit()
+    started = time.monotonic()
+    chunks = []
     try:
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages_for_api,
-            reasoning_effort=REASONING_EFFORT,
-        )
-    except Exception as e:
-        # API呼び出しに失敗した場合(APIキー未設定、ネットワークエラーなど)
-        # ※直前に保存したユーザーのメッセージはDBに残る(シンプルさ優先の作り)
-        conn.close()
-        raise HTTPException(
-            status_code=500,
-            detail=f"AI APIの呼び出しに失敗しました: {e}",
-        )
-
-    # AIの返答テキストを取り出す(choices[0] = 最初の=通常は唯一の返答)
-    assistant_content = response.choices[0].message.content
-
-    # 5. AIの返答をDBに保存
-    cursor.execute(
-        "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
-        (conversation_id, "assistant", assistant_content),
-    )
-    conn.commit()
-    assistant_message_id = cursor.lastrowid
-
-    conn.close()
-
-    # 6. クライアントに返す
-    return {
-        "id": assistant_message_id,
-        "role": "assistant",
-        "content": assistant_content,
-    }
-
-
-# --- 静的ファイル配信 ---
-# フロントエンド(static/index.html, style.css, app.js)を / で配信する
-# 注意: "/" へのマウントはあらゆるURLにマッチするため、
-# 必ずAPIエンドポイントの定義より「後」に書くこと(先に書くとAPIが呼べなくなる)
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+        # ここが処理の分かれ道。選んだ方式だけを実行する。
+        if request.mode == 'plain':
+            result = ask_plain(question)
+        elif request.mode == 'context':
+            chunks = all_chunks()
+            result = ask_with_context(question, chunks)
+        elif request.mode == 'keyword':
+            if not request.search_text.strip():
+                raise ValueError('検索語を空白区切りで入力してください。例: SQLite 保存')
+            chunks = search_keyword(request.search_text, request.top_k)
+            result = ask_with_context(question, chunks)
+        elif request.mode == 'vector':
+            chunks = search_vector(question, request.top_k)
+            result = ask_with_context(question, chunks)
+        elif request.mode == 'tools':
+            result = ask_assignments(question)
+    except NotImplementedError as error:
+        raise HTTPException(status_code=501, detail=str(error)) from None
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from None
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail='APIの応答が遅れています。時間をおいて試してください。') from None
+    except RateLimitError:
+        raise HTTPException(status_code=429, detail='APIの利用制限です。利用枠を確認してください。') from None
+    except APIError:
+        # 例外全文には内部情報が含まれる場合があるため画面へ返さない。
+        raise HTTPException(status_code=502, detail='API呼び出しに失敗しました。キー・モデル・利用枠を確認してください。') from None
+    result['sources'] = chunks
+    result['context'] = build_context(chunks)
+    result['seconds'] = round(time.monotonic() - started, 2)
+    result['demo_mode'] = DEMO_MODE
+    return result
 
 
-# --- アプリ起動時にDBを初期化 ---
-init_db()
+# APIの定義の後に置く。アプリ全体や.envは公開しない。
+app.mount('/', StaticFiles(directory=BASE_DIR / 'static', html=True), name='static')
 
-
-# `python main.py` で直接実行されたときだけサーバを起動する
-# (`uvicorn main:app` のようにコマンドから起動した場合はここは実行されない)
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8000)

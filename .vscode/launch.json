@@ -1,0 +1,7 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {"name": "完成版サンプル", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/sample-app/main.py", "cwd": "${workspaceFolder}/sample-app", "console": "integratedTerminal"},
+    {"name": "開いているPythonファイル", "type": "debugpy", "request": "launch", "program": "${file}", "cwd": "${fileDirname}", "console": "integratedTerminal"}
+  ]
+}

@@ -3,561 +3,275 @@ marp: true
 theme: default
 class: invert
 paginate: true
+size: 16:9
 style: |
-  section {
-    font-size: 24px;
-  }
-  h1 {
-    color: #60a5fa;
-  }
-  h2 {
-    color: #93c5fd;
-    border-bottom: 2px solid #3b82f6;
-    padding-bottom: 4px;
-  }
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  table {
-    font-size: 22px;
-  }
+  section { font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-size: 25px; padding: 48px 60px; }
+  h1 { color: #60a5fa; font-size: 42px; }
+  h2 { color: #93c5fd; font-size: 34px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+  table { font-size: 22px; }
+  pre { font-size: 21px; }
+  pre, code { font-family: "Noto Sans JP", "Noto Sans CJK JP", monospace; }
+  footer { font-size: 15px; }
+footer: LLMアプリケーション開発 2026
 ---
 
-# 第3回: 復習回（Web基礎）
+# 第3回：Webアプリへの組み込み
 
-**LLMアプリケーション基礎**
+ブラウザからFastAPIを経由してLLMを呼ぶ
 
 ---
 
-## 今日のゴール
+## 今日のゴールと流れ
 
-来週からのコーディング再開に向けて、前コースで扱った **Web基礎** (FastAPI / fetch / SQLite) を思い出す
+質問がどこで処理されるかを追いかける。
 
----
-
-## 今日の流れ
-
-**前半**
-- 開発環境の起動確認
-- FastAPI のおさらい（最小Hello / POST + Pydantic）
-- フロントからの fetch / async-await
-
-**後半**
-- SQLite のおさらい（`sqlite3` モジュール）
-- ミニ演習: `/api/echo` を作って fetch で呼ぶ
-
-> **LLM / OpenAI には今日はまだ触りません。** 純粋にWeb基礎の復習に集中する回です。
+| 時間 | 内容 |
+|---|---|
+| 10分 | 前回のAPI呼び出しの復習 |
+| 20分 | 画面とFastAPIの役割 |
+| 20分 | POST・JSON・入力検証 |
+| 30分 | fetchの実装と動作確認 |
+| 10分 | エラー確認・提出 |
 
 ---
 
-## chat-app の全体像
+## 通信の2段階
 
-![h:480](../share-images/overview.svg)
+1. ブラウザが自分のFastAPIに質問を送る
+2. FastAPIが外部のLLM APIに質問を送る
+3. LLMの結果をFastAPIが受け取る
+4. FastAPIがJSONを返し、ブラウザが表示する
 
-今日は右(OpenAI)には触れず、左(ブラウザ)と中央(FastAPI/SQLite)の骨格を復習する
-
----
-
-## なぜ今、復習回？
-
-- 第1回・第2回は **コードを書かずに** LLMの世界観とプロンプトを学んだ
-- 第4回からはガッツリ Python / FastAPI / JavaScript を書く
-- 「あれ、fetch ってどう書くんだっけ?」を **今日のうちに** 解消しておく
-
-![h:280](images/request-response-flow.svg)
-
-前コースの TODOアプリと **構造はほぼ同じ**。真ん中の処理がCRUDからLLM呼び出しに変わるだけ
+ブラウザへ送るのは回答です。APIキーを送る必要はありません。
 
 ---
 
-# 前半: FastAPI と fetch を思い出す
+## 既存コードと今回の追加
+
+| 前回から使う | 今回加える |
+|---|---|
+| `settings.py` | `main.py`：自作API |
+| `llm.py` の `ask_plain()` | `static/index.html`：入力画面 |
+| LLM APIの呼び出し | `static/app.js`：送信と表示 |
+| 入出力の辞書 | `static/style.css`：見た目 |
+
+`session03` のコードには、検索やDBの機能はまだありません。
 
 ---
 
-## 0. 開発環境の起動確認
+## 質問のJSON
 
-Codespaces / devcontainer を立ち上げて、以下が動くことを確認:
+ブラウザからFastAPIへ送る例です。
 
-```bash
-# Pythonバージョン
-python --version
-
-# fastapi/uvicorn がインストールされているか
-python -c "import fastapi; print(fastapi.__version__)"
+```json
+{
+  "question": "FastAPIとは？",
+  "mode": "plain",
+  "search_text": "",
+  "top_k": 3
+}
 ```
 
-> 動かない場合は devcontainer のリビルド、または
-> `pip install -r requirements.txt` を試す。
+`search_text` と `top_k` は、後の検索用です。今回は使いません。
 
 ---
 
-## 1. FastAPI のおさらい
-
-FastAPI は **Python製のWebフレームワーク**。
-
-- 関数にデコレータ(`@app.get(...)` など)を付けるだけでAPIになる
-- リクエスト/レスポンスの型を **Pydantic** で書く
-- 自動で Swagger UI (`/docs`) を生成してくれる
-
----
-
-## 最小の Hello World
+## Pydanticによる入力の形
 
 ```python
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def hello():
-    return {"message": "Hello, World!"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+class Question(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    mode: Literal['plain'] = 'plain'
 ```
 
-起動:
+型と長さをサーバーで検証します。
+ブラウザの `maxlength` だけでは、別のプログラムからの入力を防げません。
+空白だけの文字列は `strip()` の後にも確認します。
+
+---
+
+## エンドポイント
+
+```python
+@app.post('/api/ask')
+def ask(request: Question):
+    question = request.question.strip()
+    result = ask_plain(question)
+    return result
+```
+
+これは中心部分の抜粋です。実際のコードには入力検証、
+エラー処理、表示用の情報の追加があります。
+
+---
+
+## FastAPIからLLMを呼ぶ
+
+```python
+result = ask_plain(question)
+```
+
+第2回と同じ関数です。入力方法が `input()` から
+HTTPリクエストに変わっても、LLMとの通信は再利用できます。
+
+通常の `def` のエンドポイントから、同期SDKを呼びます。
+今回は独自の非同期処理やストリーミングは追加しません。
+
+---
+
+## 静的ファイルの配信
+
+```python
+app.mount(
+    '/',
+    StaticFiles(directory=BASE_DIR / 'static', html=True),
+    name='static',
+)
+```
+
+API定義より後に書きます。公開対象は `static/` だけです。
+アプリのディレクトリ全体を公開すると、設定やDBが漏れる危険があります。
+
+---
+
+## 実習1：サーバー起動
+
+リポジトリのルートから実行します。
 
 ```bash
+source .venv/bin/activate
+cd session03/exercise
 python main.py
 ```
 
-`http://localhost:8000/` にアクセスすると JSON が返る。
+8000番のポートを開きます。
+画面は表示されますが、送信部分が穴埋めなのでまだ質問できません。
 
 ---
 
-## HTTPメソッドの復習
+## fetchによる送信
 
-| メソッド | 用途                | 例                   |
-| -------- | ------------------- | -------------------- |
-| GET      | 取得                | 一覧を取る、1件取る  |
-| POST     | 新規作成 / 処理実行 | メッセージを送る     |
-| PUT      | 更新                | 完了状態を切り替える |
-| DELETE   | 削除                | 1件削除              |
-
-FastAPI では:
-
-```python
-@app.get("/items")        # GET
-@app.post("/items")       # POST
-@app.put("/items/{id}")   # PUT (パスパラメータ)
-@app.delete("/items/{id}") # DELETE
-```
-
----
-
-## 2. POST + Pydantic でデータを受け取る
-
-POSTでJSONボディを受け取る場合は、Pydanticモデルを引数に取る。
-
-```python
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
-
-app = FastAPI()
-
-class EchoRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=1000)
-
-@app.post("/api/echo")
-def echo(req: EchoRequest):
-    return {"echo": req.message}
-```
-
-ポイント:
-
-- `BaseModel` を継承して型を書くだけでJSONをパースしてくれる
-- `Field(...)` でバリデーション(最小・最大長など)
-- 不正なリクエストは FastAPI が自動で **422 Unprocessable Entity** を返す
-
----
-
-## バリデーションの動き
-
-```python
-class EchoRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=1000)
-```
-
-| 入力                | 結果                     |
-| ------------------- | ------------------------ |
-| `{"message": "hi"}` | OK → 200                 |
-| `{"message": ""}`   | 422 (空文字)             |
-| `{"message": 123}`  | 422 (型違反)             |
-| `{}`                | 422 (必須フィールド欠落) |
-
-> **「バリデーションを自分で書かなくていい」** のがFastAPIの嬉しいところ。
-
----
-
-## Swagger UI を見てみる
-
-サーバー起動中に `http://localhost:8000/docs` にアクセスすると、
-FastAPIが自動生成したAPIドキュメント(Swagger UI)が見られる。
-
-- エンドポイント一覧
-- リクエスト/レスポンスの型
-- ブラウザから直接叩いて試せる
-
-> 開発中はめちゃくちゃ便利。フロントを書く前にここで挙動を確認できる。
-
----
-
-## 3. CORS と StaticFiles の復習
-
-```python
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# static/ ディレクトリを / で配信
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-```
-
-- **CORS** = 別オリジンからのfetchを許可する設定。開発中は `*` でOK
-- **StaticFiles** = `static/index.html` などを直接ブラウザに返せる
-- マウントは **APIルートより後** に書く(先に書くと `/api/...` まで static 扱いになり呼べなくなる)
-
----
-
-## 4. フロントからの fetch
-
-ブラウザの JavaScript からサーバーAPIを呼ぶ標準の手段。
-
-```js
-// GET
-const res = await fetch("/api/items");
-const data = await res.json();
-console.log(data);
-```
-
-```js
-// POST + JSONボディ
-const res = await fetch("/api/echo", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ message: "こんにちは" }),
+```javascript
+const response = await fetch('/api/ask', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({question: question, mode: 'plain'})
 });
-const data = await res.json();
+const data = await response.json();
 ```
+
+相対パスなので同じサーバーへ送ります。
+JavaScriptのオブジェクトを `JSON.stringify()` でJSON文字列にします。
 
 ---
 
-## async / await の復習
+## asyncとawait
 
-`fetch` は **Promise** を返す。`await` で結果が返ってくるまで待つ。
+`fetch()` の通信結果は、すぐには返りません。
 
-```js
-// async関数の中でしか await は使えない
-async function sendMessage() {
-  const res = await fetch("/api/echo", { ... });
-  const data = await res.json();
-  console.log(data.echo);
+- `async function`：待ち時間のある処理を書く関数
+- `await`：その処理の結果を待って次へ進む
+- その間もブラウザ全体が固まるわけではない
+
+`response.json()` も、本文の読み取りを待ちます。
+
+---
+
+## 実習2：POSTの穴埋め
+
+1. `static/app.js` の `TODO` を探す
+2. POST通信のコメントを外す
+3. 仮の `throw new Error(...)` を削除する
+4. ページを再読み込みして送信する
+5. デモの固定文が表示されることを確認する
+
+次に講師指定のAPIモードで同じ操作を確認します。
+
+---
+
+## Networkタブで観察
+
+開発者ツールのNetworkタブで `/api/ask` を選びます。
+
+- Request Payload：送った質問と方式
+- Status：200、422、502など
+- Response：返ってきたJSON
+- 時間：応答までの待ち時間
+
+外部LLMへの通信はサーバー側なので、ここには直接表示されません。
+
+---
+
+## 待っている間の画面
+
+```javascript
+button.disabled = true;
+statusText.textContent = '調べています…';
+```
+
+処理の最後には `finally` でボタンを元に戻します。
+成功時も失敗時も、次の操作ができる必要があります。
+
+送信前に古い回答と資料を消し、新しい質問の結果と混同しないようにします。
+
+---
+
+## HTTPエラーの扱い
+
+`fetch()` は、HTTP 400や500でも必ず例外になるわけではありません。
+
+```javascript
+if (!response.ok) {
+  throw new Error('入力内容やAPI設定を確認してください。');
 }
 ```
 
-`addEventListener` の中で `async` を使うには:
+通信自体の失敗と、サーバーが返したエラーを区別します。
 
-```js
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  // ここで await が使える
-});
+---
+
+## 安全な表示
+
+```javascript
+document.getElementById('answer').textContent = data.answer;
 ```
 
----
+LLMの出力も、ユーザー入力と同じように扱います。
+`innerHTML` へ入れると、HTMLとして解釈してしまいます。
 
-## エラーハンドリングの定石
-
-`fetch` は **ネットワークエラーのときしか** rejectされない。
-HTTPステータスが 4xx / 5xx でも `res.ok === false` になるだけ。
-
-```js
-try {
-  const res = await fetch("/api/echo", { ... });
-  if (!res.ok) {
-    throw new Error(`サーバーエラー: ${res.status}`);
-  }
-  const data = await res.json();
-  // 成功時の処理
-} catch (err) {
-  // ネットワーク or 上の throw が来る
-  console.error(err);
-}
-```
+教材ではMarkdownの装飾を付けず、文字列として表示します。
 
 ---
 
-## XSS対策 — textContent を使う
+## 実習3：異常な入力
 
-サーバーから返ってきた文字列を画面に出すとき、**`innerHTML` は危険**。
-ユーザー入力に `<script>` が混ざっていたら実行されてしまう。
+`/docs` を開き、POST `/api/ask` を試します。
 
-```js
-// NG: 危ない
-element.innerHTML = data.echo;
+| 入力 | 期待する結果 |
+|---|---|
+| 空文字 | 422 |
+| 空白だけ | 422 |
+| 501文字以上 | 422 |
+| `mode: "unknown"` | 422 |
 
-// OK: テキストとしてだけ扱う
-element.textContent = data.echo;
-```
-
-> **「入力は信用しない」** は前コース第8回(セキュリティ)で扱った原則。
-> LLMの返答も「他人が書いた文字列」なので同じ扱いをする。
+ブラウザの制約を通さなくても、サーバー側が止めます。
 
 ---
 
-# 後半: SQLite と演習
+## 確認問題
+
+1. `fetch('/api/ask')` は誰に送信している？
+2. APIキーが必要なのは、どちらの通信？
+3. `finally` がないと、失敗後の画面で何が起こり得る？
+4. LLMが返したHTMLをそのまま実行してよい？
 
 ---
 
-## 5. SQLite のおさらい
+## 提出物と次回
 
-- **ファイル1個で完結する** 軽量データベース
-- Pythonには標準で `sqlite3` モジュールが入っている
-- このコースの最終形 `chat-app` でも会話履歴の保存に使う
+提出：`static/app.js` と `worksheet.md` のGitHub URL。
 
-```python
-import sqlite3
+ワークシートには、質問から回答表示までの処理を4段階で書きます。
+HTTP 422を1例確認して記録します。
 
-conn = sqlite3.connect("chat.db")
-cursor = conn.cursor()
-
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        role TEXT NOT NULL,
-        content TEXT NOT NULL
-    )
-""")
-conn.commit()
-conn.close()
-```
-
----
-
-## INSERT / SELECT の基本
-
-```python
-conn = sqlite3.connect("chat.db")
-cursor = conn.cursor()
-
-# 追加
-cursor.execute(
-    "INSERT INTO messages (role, content) VALUES (?, ?)",
-    ("user", "こんにちは"),
-)
-conn.commit()
-
-# 取得
-cursor.execute("SELECT id, role, content FROM messages ORDER BY id")
-rows = cursor.fetchall()
-for row in rows:
-    print(row)  # (1, 'user', 'こんにちは')
-
-conn.close()
-```
-
-> **`?` プレースホルダ** を使うのが必須。
-> `f"... '{user_input}'"` は **SQLインジェクション** の温床。
-
----
-
-## row_factory で辞書っぽく扱う
-
-タプルではなく **名前でアクセス** したいとき。
-
-```python
-conn = sqlite3.connect("chat.db")
-conn.row_factory = sqlite3.Row  # ←これ
-
-cursor = conn.cursor()
-cursor.execute("SELECT id, role, content FROM messages")
-for row in cursor.fetchall():
-    print(row["role"], row["content"])
-```
-
-`chat-app/main.py` でもこの形を使う。
-読みやすいし、列の順番に依存しないので保守しやすい。
-
----
-
-## 接続は使うたびに connect → close
-
-毎回の関数で `connect` して、最後に `close` する書き方が一番分かりやすい
-
-```python
-def get_all_messages():
-    conn = sqlite3.connect("chat.db")
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM messages")
-    rows = cursor.fetchall()
-
-    conn.close()
-    return rows
-```
-
-- 関数ごとに自分で開いて、自分で閉じる
-- `with` 文を使う書き方もあるが、まずは「明示的に閉じる」習慣をつける
-
-> 第7回(履歴の永続化)で **再びこの形に出会う**。
-> 「あ、第3回でやったやつだ」となれば OK。
-
----
-
-## 6. 演習: echo API + 簡易UI
-
-サーバーが受け取った文字列を **そのまま返す** だけのミニアプリを作る。
-
-仕様:
-
-- `POST /api/echo` を実装
-  - リクエスト: `{"message": "..."}`
-  - レスポンス: `{"echo": "..."}`
-- フロント(`static/index.html` + `app.js`)から fetch で呼ぶ
-- 返ってきた `echo` を画面に **textContent で** 表示する
-
-> **OpenAI API は使いません。** APIキーも不要。
-> `export OPENAI_API_KEY=...` も今日はやらなくてOK。
-
----
-
-## ファイル構成
-
-```text
-session03/exercise/
-├── main.py              # FastAPI バックエンド
-├── static/
-│   ├── index.html       # 入力フォーム + 応答表示
-│   ├── style.css
-│   └── app.js           # fetch で /api/echo を呼ぶ
-└── README.md
-```
-
-- 自分でゼロから書いてもよい
-- `session03/exercise/` に完成形があるので、つまったらコピーしてOK
-
----
-
-## main.py の要点
-
-```python
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
-
-app = FastAPI()
-
-class EchoRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=1000)
-
-@app.post("/api/echo")
-def echo(req: EchoRequest):
-    return {"echo": req.message}
-
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
----
-
-## app.js の要点
-
-```js
-const form = document.getElementById("echo-form");
-const input = document.getElementById("message-input");
-const responseEl = document.getElementById("response");
-
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const message = input.value.trim();
-  if (!message) return;
-
-  const res = await fetch("/api/echo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
-  });
-  const data = await res.json();
-  responseEl.textContent = data.echo; // ← textContent
-});
-```
-
----
-
-## 動作確認の手順
-
-1. `cd session03/exercise && python main.py`
-2. Codespaces のポート 8000 をブラウザで開く
-3. 文字列を入力して「送信」を押す
-4. 入力した文字列がそのまま表示されればOK
-
-curl でも確認できる:
-
-```bash
-curl -X POST http://localhost:8000/api/echo \
-  -H "Content-Type: application/json" \
-  -d '{"message": "こんにちは"}'
-# => {"echo":"こんにちは"}
-```
-
-Swagger UI: `http://localhost:8000/docs`
-
----
-
-## DevTools で観察する
-
-ブラウザの DevTools (F12) を開いて:
-
-- **Network タブ** で `/api/echo` への POST を確認
-  - リクエストペイロード(送信したJSON)
-  - レスポンス(返ってきたJSON)
-- **Console タブ** でエラーがないか確認
-- **要素タブ** で `textContent` で入った文字列を確認
-
-> 第6回でこの観察スキルが効いてくる。
-> マルチターン会話で `messages` 配列が伸びていく様子を実際にここで覗く。
-
----
-
-## 本日のまとめ
-
-### 学んだこと
-1. **FastAPI** = デコレータ + Pydantic で簡単にAPIが書ける
-2. フロントは **`fetch` + `async/await`** でAPIを叩く
-3. 表示には **`textContent`**（XSS対策）
-4. **SQLite** は `sqlite3` モジュールで簡単に使える / `?` プレースホルダ必須
-5. `chat-app` のバックボーンは全部この上に乗る
-
-> ここまでが「土台」。来週からこの土台に **LLM** を乗せていく。
-
----
-
-### 次回予告
-**第4回: OpenAI APIに初めて触れる**
-ついに **LLM をコードから呼ぶ** 回。`pip install openai` → `client.chat.completions.create(...)` でターミナルから対話する CLI スクリプト (`python chat.py`) を作る。**APIキーは講師から配布**（受講生個人での取得は不要）。
-
----
-
-## 提出物
-
-実習で作成したファイルをフォームから提出してください:
-
-1. `session03/exercise/` の echo API が動いている GitHub のURL
-   - 例: `https://github.com/ユーザー名/リポジトリ名/tree/main/session03/exercise`
-
-お疲れ様でした！
+次回は、LLMへ授業資料を渡し、回答の根拠を確認します。

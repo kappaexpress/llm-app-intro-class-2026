@@ -1,219 +1,89 @@
-/**
- * Chat App JavaScript - 第7回 (1会話・SQLite保存版)
- * LLMアプリケーション基礎
- *
- * 第6回からの変更点:
- *   - フロントは会話履歴を持たない (サーバの DB が持つ)
- *   - ページロード時に GET /api/messages で過去全件を取得して描画
- *   - 送信時は POST /api/messages にユーザー発言1件だけを送る
- *
- * このファイルがやること:
- *   1. ページロード時に過去メッセージを取得・描画
- *   2. ユーザーが送信したらサーバに POST して、AI の返答を画面に追加
- *   3. AI の返答待ち中は「考え中...」を表示
- */
+// HTMLのidと対応させる。フレームワークは使わない。
+const form = document.getElementById('question-form');
+const button = document.getElementById('send-button');
+const statusText = document.getElementById('status');
 
-// ============================================================
-// 状態 (state)
-// ============================================================
-
-// API 送信中フラグ (連打防止)
-let isSending = false;
-
-// ============================================================
-// メッセージの取得・描画
-// ============================================================
-
-/**
- * 過去のメッセージをサーバから取得して画面に並べる
- * (ページロード時に1回呼ぶ)
- */
-async function loadMessages() {
+async function loadConfig() {
   try {
-    const response = await fetch("/api/messages");
-    if (!response.ok) {
-      showError("メッセージの取得に失敗しました");
-      return;
+    const response = await fetch('/api/config');
+    if (!response.ok) throw new Error('設定の取得に失敗しました。');
+    const data = await response.json();
+    if (data.demo_mode) {
+      document.getElementById('mode-status').textContent = 'デモモード：固定文・資料抜粋・疑似ベクトルを使います。LLMは呼びません。';
+    } else {
+      document.getElementById('mode-status').textContent = 'APIモード：質問と参照資料を外部APIへ送信します。';
     }
-    const messages = await response.json();
-    renderMessages(messages);
   } catch (error) {
-    showError("通信エラーが発生しました");
+    document.getElementById('mode-status').textContent = error.message;
   }
 }
 
-/**
- * メッセージ一覧を画面に表示する
- */
-function renderMessages(messages) {
-  const list = document.getElementById("message-list");
-  list.innerHTML = "";
+function renderSources(sources) {
+  const list = document.getElementById('sources');
+  list.replaceChildren();
+  for (const source of sources) {
+    const item = document.createElement('li');
+    const title = document.createElement('strong');
+    title.textContent = '[資料' + source.id + '] ' + source.title + ' / ' + source.heading;
+    const body = document.createElement('p');
+    body.textContent = source.body;
+    const filename = document.createElement('small');
+    filename.textContent = '原本: data/' + source.source;
+    if (source.score !== undefined) filename.textContent += ' / 検索スコア: ' + source.score.toFixed(3);
+    item.appendChild(title);
+    item.appendChild(body);
+    item.appendChild(filename);
+    list.appendChild(item);
+  }
+}
 
-  if (messages.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.textContent = "下の入力欄からメッセージを送ってみよう";
-    list.appendChild(empty);
+async function askQuestion(event) {
+  event.preventDefault();
+  const question = document.getElementById('question').value.trim();
+  if (!question) {
+    statusText.textContent = '質問を入力してください。';
     return;
   }
-
-  messages.forEach((msg) => {
-    appendMessage(msg.role, msg.content);
-  });
-
-  scrollToBottom();
-}
-
-/**
- * メッセージを1つ画面に追加する
- *   role: "user" または "assistant"
- *   extraClass: 追加のCSSクラス (例: "loading")
- *   返り値: 追加したメッセージのDOM要素
- */
-function appendMessage(role, content, extraClass = "") {
-  const list = document.getElementById("message-list");
-
-  // 空状態の表示が残っていたら消す
-  const emptyState = list.querySelector(".empty-state");
-  if (emptyState) {
-    emptyState.remove();
-  }
-
-  const div = document.createElement("div");
-  div.className = "message " + role + (extraClass ? " " + extraClass : "");
-
-  const bubble = document.createElement("div");
-  bubble.className = "message-bubble";
-  // XSS対策で textContent を使う (innerHTML は使わない)
-  bubble.textContent = content;
-
-  div.appendChild(bubble);
-  list.appendChild(div);
-
-  scrollToBottom();
-  return div;
-}
-
-/**
- * メッセージ表示エリアを一番下までスクロールする
- */
-function scrollToBottom() {
-  const list = document.getElementById("message-list");
-  list.scrollTop = list.scrollHeight;
-}
-
-// ============================================================
-// メッセージ送信
-// ============================================================
-
-/**
- * メッセージを送信する
- *   1. ユーザーメッセージを画面に追加
- *   2. 「考え中...」を表示
- *   3. POST /api/messages を呼ぶ
- *   4. 「考え中...」を AI の返答で置き換える
- *
- * 重要: 過去の履歴は送らない (= サーバが DB から自分で取り出す)
- */
-async function sendMessage() {
-  // 連打防止
-  if (isSending) return;
-
-  const input = document.getElementById("chat-input");
-  const content = input.value.trim();
-
-  if (content === "") {
-    showError("メッセージを入力してください");
-    return;
-  }
-
-  isSending = true;
-  setSendButtonEnabled(false);
-
-  // 1. ユーザーメッセージを画面に即追加
-  appendMessage("user", content);
-  input.value = "";
-
-  // 2. 「考え中...」をプレースホルダで表示
-  const loadingElement = appendMessage("assistant", "考え中...", "loading");
-
+  button.disabled = true;
+  statusText.textContent = '調べています…';
+  document.getElementById('answer').textContent = '';
+  renderSources([]);
+  document.getElementById('debug').textContent = '';
   try {
-    // 3. サーバに送る (本文1件だけ、履歴は送らない)
-    const response = await fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: content }),
+    // BEGIN EXERCISE fetch
+    const response = await fetch('/api/ask', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        question: question,
+        mode: document.getElementById('mode').value,
+        search_text: document.getElementById('search-text').value,
+        top_k: Number(document.getElementById('top-k').value)
+      })
     });
-
+    // END EXERCISE fetch
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      loadingElement.remove();
-      showError(error.detail || "AIの返答取得に失敗しました");
-      return;
+      let message = '入力内容を確認してください。';
+      if (typeof data.detail === 'string') message = data.detail;
+      throw new Error(message);
     }
-
-    const assistantMsg = await response.json();
-
-    // 4. 「考え中...」を AI の返答で置き換える
-    loadingElement.querySelector(".message-bubble").textContent =
-      assistantMsg.content;
-    loadingElement.classList.remove("loading");
-    scrollToBottom();
+    // LLMの出力も信頼せず、HTMLとして実行しない。
+    document.getElementById('answer').textContent = data.answer;
+    renderSources(data.sources);
+    document.getElementById('debug').textContent = JSON.stringify({
+      context: data.context,
+      tool_results: data.tool_results,
+      input_tokens: data.input_tokens,
+      output_tokens: data.output_tokens
+    }, null, 2);
+    statusText.textContent = '完了 / ' + data.seconds + '秒';
   } catch (error) {
-    loadingElement.remove();
-    showError("通信エラーが発生しました");
+    statusText.textContent = error.message;
   } finally {
-    isSending = false;
-    setSendButtonEnabled(true);
+    button.disabled = false;
   }
 }
 
-/**
- * 送信ボタンの有効/無効を切り替える
- */
-function setSendButtonEnabled(enabled) {
-  const button = document.querySelector(".send-button");
-  button.disabled = !enabled;
-}
-
-// ============================================================
-// エラー表示
-// ============================================================
-
-function showError(message) {
-  const errorDiv = document.getElementById("error-message");
-  errorDiv.textContent = message;
-  errorDiv.style.display = "block";
-  // 5秒後に自動で消す
-  setTimeout(() => {
-    errorDiv.style.display = "none";
-  }, 5000);
-}
-
-// ============================================================
-// イベントリスナー
-// ============================================================
-
-// フォーム送信 (送信ボタンを押したとき)
-document.getElementById("chat-form").addEventListener("submit", (e) => {
-  e.preventDefault();
-  sendMessage();
-});
-
-// テキストエリアで Enter で送信、Shift+Enter で改行
-document.getElementById("chat-input").addEventListener("keydown", (e) => {
-  // e.isComposing は日本語入力(IME)で変換中なら true。
-  // 変換を確定するためのEnterで送信されてしまわないようにチェックする
-  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-// ============================================================
-// 初期化
-// ============================================================
-
-// ページが読み込まれたら、まず過去のメッセージを取得する
-// (これで「リロードしても消えない」が実現する)
-loadMessages();
+form.addEventListener('submit', askQuestion);
+loadConfig();
